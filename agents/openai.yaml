@@ -1,4 +1,50 @@
-interface:
-  display_name: "PaperScope AI Deep Reading"
-  short_description: "Analyze papers with evidence-grounded structured deep reading"
-  default_prompt: "Use $paperscope-ai-deep-reading to produce a structured, evidence-grounded deep reading report for the provided paper."
+name: paperscope-ai-deep-reading
+version: 1.1.0
+description: >
+  Deep-read academic papers for PaperScope. Turns parsed paper content into
+  evidence-grounded structured analysis with reading mode routing, assumption
+  auditing, and a multi-dimensional judgment card.
+
+skill_file: ../SKILL.md
+schema_file: ../schemas/deep-reading-result.schema.json
+evidence_rules_file: ../references/evidence-rules.md
+
+trigger_phrases:
+  - AI paper deep reading
+  - paper understanding
+  - method analysis
+  - claim-evidence review
+  - assumption audit
+  - research follow-up
+  - 论文精读
+  - 方法分析
+  - 证据审查
+  - 研究跟进
+
+reading_modes:
+  - id: quick_summary
+    description: One-card summary. Outputs judgment_card and research_question only.
+  - id: standard
+    description: Full deep reading report. Default mode.
+  - id: reviewer_mode
+    description: Peer-review style. Emphasizes critical_review, claim_evidence, and evidence_audit.
+  - id: followup_mode
+    description: Research planning. Emphasizes open_questions, method_summary, and contributions.
+  - id: method_only
+    description: Technical deep-dive. Emphasizes method_summary, assumptions, and claim_evidence.
+
+output:
+  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.1
+  secondary: optional human-readable summary when conversational output is requested
+
+constraints:
+  max_papers_per_call: 5
+  min_evidence_grade_for_deep_reading: E2_BODY_TEXT
+  schema_version: "1.1"
+
+model_notes: >
+  Always resolve reading_mode before starting analysis.
+  Never fabricate evidence refs, locations, or numbers.
+  Apply both downgrade rules and protect rules from evidence-rules.md.
+  High-risk assumptions must appear in both method_summary.assumptions
+  and critical_review.fragile_assumptions.
