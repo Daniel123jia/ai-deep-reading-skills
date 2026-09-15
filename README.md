@@ -36,7 +36,7 @@ claim-evidence review, assumption auditing, or research follow-up workflows.
 
 | Mode | When to use |
 |---|---|
-| `quick_summary` | Fast triage — outputs only judgment card and research question |
+| `quick_summary` | Fast triage — emphasizes judgment card and research question while preserving the full JSON shell |
 | `standard` | Default full deep reading |
 | `reviewer_mode` | Peer review prep — emphasizes critical review and evidence audit |
 | `followup_mode` | Research planning — emphasizes open questions and contributions |

@@ -498,7 +498,7 @@
         "open_questions",
         "judgment_card"
       ],
-      "description": "In quick_summary mode, all fields except research_question and judgment_card may be empty arrays or null. They must still be present to satisfy the schema.",
+      "description": "In quick_summary mode, only research_question and judgment_card carry substantive analysis. Other required fields must still be present as empty arrays or valid placeholder objects that satisfy this schema.",
       "properties": {
         "paper_id":   { "type": "string" },
         "identity":   { "$ref": "#/$defs/paper_identity" },

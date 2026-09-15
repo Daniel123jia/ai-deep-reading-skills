@@ -17,13 +17,13 @@ Before starting analysis, resolve the `input.reading_goal` field to one of the f
 
 | Mode | Trigger phrases | Primary output focus |
 |---|---|---|
-| `quick_summary` | "一句话总结", "摘要", "quick take", "tldr" | `judgment_card` + `research_question` only |
+| `quick_summary` | "一句话总结", "摘要", "quick take", "tldr" | Emphasize `judgment_card` + `research_question`; keep the full JSON shell |
 | `standard` | default, "精读", "deep read", "全面分析" | Full report, all sections |
 | `reviewer_mode` | "审稿", "peer review", "找问题", "挑毛病" | `critical_review` + `claim_evidence` + `evidence_audit` emphasized |
 | `followup_mode` | "研究方向", "follow-up", "下一步", "open questions" | `open_questions` + `method_summary` + `contributions` emphasized |
 | `method_only` | "方法", "算法", "how it works", "技术细节" | `method_summary` + `assumptions` + `claim_evidence` emphasized |
 
-In `quick_summary` mode, skip steps 4–10 of the workflow and output only `judgment_card` and `research_question`. In all other modes, run the full workflow and adjust emphasis in the human-readable summary.
+In `quick_summary` mode, skip steps 4–10 of the workflow and keep only `judgment_card` and `research_question` substantive. The output must still satisfy the schema by including the other required fields with empty arrays or valid placeholder objects. In all other modes, run the full workflow and adjust emphasis in the human-readable summary.
 
 ---
 
@@ -53,7 +53,7 @@ Evidence grade represents material actually inspected, not material that may exi
 Run steps in order. Steps 1–2 are a coarse pass; step 3 onward uses the paper type to guide depth.
 
 **Step 0 — Resolve reading mode.**
-Check `input.reading_goal` and set the active mode per the routing table above. If `quick_summary`, jump to step 3 and then output only `judgment_card` + `research_question`.
+Check `input.reading_goal` and set the active mode per the routing table above. If `quick_summary`, jump to step 3 and then make only `judgment_card` + `research_question` substantive while preserving the complete schema-required JSON structure.
 
 **Step 1 — Coarse paper scan.**
 Record: title, venue/year, authors if available, identifiers, evidence grade, abstract, rough section list, and a preliminary paper type guess. This is a fast pass; details are filled in later steps.
@@ -120,7 +120,7 @@ The result must always include:
 
 Each paper in `papers` must include identity, evidence grade, evidence refs, paper map, research question, method summary (with assumptions), contributions, evaluation or findings, limitations or unknowns, uncertainties, claim-evidence mapping, evidence audit, critical review (with fragile assumptions), open questions, and a judgment card.
 
-In `quick_summary` mode, only `research_question` and `judgment_card` are required per paper.
+In `quick_summary` mode, only `research_question` and `judgment_card` should contain substantive analysis. All other schema-required paper fields must still be present as empty arrays or valid placeholder objects, never omitted.
 
 ---
 

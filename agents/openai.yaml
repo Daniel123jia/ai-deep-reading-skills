@@ -23,7 +23,7 @@ trigger_phrases:
 
 reading_modes:
   - id: quick_summary
-    description: One-card summary. Outputs judgment_card and research_question only.
+    description: One-card summary. Emphasizes judgment_card and research_question while preserving the full schema-required JSON shell.
   - id: standard
     description: Full deep reading report. Default mode.
   - id: reviewer_mode
