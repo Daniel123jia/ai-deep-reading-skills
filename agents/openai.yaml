@@ -1,0 +1,4 @@
+interface:
+  display_name: "PaperScope AI Deep Reading"
+  short_description: "Analyze papers with evidence-grounded structured deep reading"
+  default_prompt: "Use $paperscope-ai-deep-reading to produce a structured, evidence-grounded deep reading report for the provided paper."
