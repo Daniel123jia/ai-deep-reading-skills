@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:paperscope:schemas:deep-reading-result:1.1",
+  "$id": "urn:paperscope:schemas:deep-reading-result:1.2",
   "title": "PaperScope AI Deep Reading Result",
-  "description": "Structured output contract for the PaperScope AI deep reading skill. Version 1.1 adds reading_mode routing, assumption fields, fragile_assumptions, equations support, and split judgment_card research_value.",
+  "description": "Structured output contract for the PaperScope AI deep reading skill. Version 1.2 adds source boundary, evidence coverage, locator modes, snippet/paraphrase evidence refs, two-axis assumptions, claim-level support boundaries, and novelty verification.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.1"
+      "const": "1.2"
     },
     "analysis_type": {
       "type": "string",
@@ -88,10 +88,80 @@
       "enum": ["strong", "moderate", "weak", "missing", "overclaimed", "not_applicable"]
     },
 
-    "assumption_type": {
+    "assumption_provenance": {
       "type": "string",
-      "enum": ["explicit", "inferred", "high_risk"],
-      "description": "explicit = stated by authors; inferred = implied by design; high_risk = failure invalidates core claim."
+      "enum": ["explicit", "inferred"],
+      "description": "Whether the assumption is directly stated by the paper or inferred from the inspected material."
+    },
+
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "How severely the paper's core claim would be affected if the assumption fails."
+    },
+
+    "locator_mode": {
+      "type": "string",
+      "enum": ["page_grounded", "structure_grounded", "source_limited"],
+      "description": "Highest reliable locator precision available for this evidence."
+    },
+
+    "context_mode": {
+      "type": "string",
+      "enum": ["paper_only", "targeted_external_check", "externally_verified"],
+      "description": "Whether analysis uses only the paper, targeted external checks, or independently verified external context."
+    },
+
+    "coverage_level": {
+      "type": "string",
+      "enum": ["sufficient", "partial", "limited"]
+    },
+
+    "evidence_material": {
+      "type": "string",
+      "enum": [
+        "metadata",
+        "abstract",
+        "body_text",
+        "methods",
+        "experiments",
+        "figures",
+        "tables",
+        "equations",
+        "appendix",
+        "supplement",
+        "external_context"
+      ]
+    },
+
+    "evidence_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "available", "missing", "note"],
+      "properties": {
+        "level": { "$ref": "#/$defs/coverage_level" },
+        "available": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_material" }
+        },
+        "missing": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_material" }
+        },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+
+    "source_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_grade", "evidence_coverage", "locator_mode", "context_mode"],
+      "properties": {
+        "evidence_grade": { "$ref": "#/$defs/evidence_grade" },
+        "evidence_coverage": { "$ref": "#/$defs/evidence_coverage" },
+        "locator_mode": { "$ref": "#/$defs/locator_mode" },
+        "context_mode": { "$ref": "#/$defs/context_mode" }
+      }
     },
 
     "location": {
@@ -110,11 +180,25 @@
     "evidence_ref": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "evidence_type", "source", "location", "note"],
+      "required": [
+        "id",
+        "source_type",
+        "evidence_type",
+        "locator_mode",
+        "location",
+        "source_block_id",
+        "snippet",
+        "paraphrase",
+        "verification_status"
+      ],
       "properties": {
         "id": {
           "type": "string",
           "pattern": "^ev-[0-9]{3,}$"
+        },
+        "source_type": {
+          "type": "string",
+          "enum": ["paper", "metadata", "external", "user_provided", "parser"]
         },
         "evidence_type": {
           "type": "string",
@@ -131,11 +215,23 @@
             "external_context"
           ]
         },
-        "source":   { "type": "string" },
+        "locator_mode": { "$ref": "#/$defs/locator_mode" },
         "location": { "$ref": "#/$defs/location" },
-        "note": {
+        "source_block_id": {
+          "type": ["string", "null"],
+          "description": "Stable upstream source block id when available."
+        },
+        "snippet": {
+          "type": ["string", "null"],
+          "description": "Short verbatim source excerpt from parsed material only. Null when no real excerpt is available."
+        },
+        "paraphrase": {
+          "type": ["string", "null"],
+          "description": "Concise model paraphrase of the source. Must not be presented as source text."
+        },
+        "verification_status": {
           "type": "string",
-          "description": "Short excerpt or accurate paraphrase. Keep it brief. Do not reproduce long passages."
+          "enum": ["verified", "needs_verification", "unavailable"]
         }
       }
     },
@@ -158,21 +254,34 @@
     "assumption_item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["assumption_text", "assumption_type", "status", "evidence_refs", "risk_note"],
+      "required": [
+        "assumption_text",
+        "provenance",
+        "risk_level",
+        "status",
+        "evidence_refs",
+        "failure_mode",
+        "testability"
+      ],
       "properties": {
         "assumption_text": {
           "type": "string",
           "description": "Plain-language statement of the assumption."
         },
-        "assumption_type": { "$ref": "#/$defs/assumption_type" },
+        "provenance":      { "$ref": "#/$defs/assumption_provenance" },
+        "risk_level":      { "$ref": "#/$defs/risk_level" },
         "status":          { "$ref": "#/$defs/statement_status" },
         "evidence_refs": {
           "type": "array",
           "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
         },
-        "risk_note": {
+        "failure_mode": {
           "type": ["string", "null"],
-          "description": "For high_risk assumptions: explain what breaks if this assumption fails. Null for others."
+          "description": "What breaks if the assumption fails. Required in substance for high-risk assumptions."
+        },
+        "testability": {
+          "type": ["string", "null"],
+          "description": "How the assumption could be checked or stress-tested."
         }
       }
     },
@@ -270,6 +379,37 @@
       }
     },
 
+    "method_module_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_name",
+        "purpose",
+        "input",
+        "operation",
+        "output",
+        "why_needed",
+        "measured_effect",
+        "evidence_refs"
+      ],
+      "properties": {
+        "module_name": { "type": "string" },
+        "purpose": { "type": ["string", "null"] },
+        "input": { "type": ["string", "null"] },
+        "operation": { "type": ["string", "null"] },
+        "output": { "type": ["string", "null"] },
+        "why_needed": { "type": ["string", "null"] },
+        "measured_effect": {
+          "type": ["string", "null"],
+          "description": "Reported ablation or experiment effect if inspected. Null if not established."
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+        }
+      }
+    },
+
     "method_summary": {
       "type": "object",
       "additionalProperties": false,
@@ -290,11 +430,11 @@
         "expected_benefit":  { "$ref": "#/$defs/evidence_statement" },
         "main_modules": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": { "$ref": "#/$defs/method_module_item" }
         },
         "assumptions": {
           "type": "array",
-          "description": "Explicit, inferred, and high-risk assumptions identified in the method. High-risk assumptions must also appear in critical_review.fragile_assumptions.",
+          "description": "Explicit or inferred assumptions identified in the method, with independent risk levels. High-risk assumptions must also appear in critical_review.fragile_assumptions.",
           "items": { "$ref": "#/$defs/assumption_item" }
         }
       }
@@ -303,15 +443,63 @@
     "claim_evidence_item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["claim", "evidence_refs", "support_strength", "what_would_strengthen_it"],
+      "required": [
+        "claim_id",
+        "importance",
+        "claim",
+        "evidence_refs",
+        "support_strength",
+        "support_reason",
+        "scope_boundary",
+        "unsupported_stronger_claim",
+        "what_would_strengthen_it"
+      ],
       "properties": {
+        "claim_id": {
+          "type": "string",
+          "pattern": "^cl-[0-9]{3,}$"
+        },
+        "importance": {
+          "type": "string",
+          "enum": ["core", "secondary", "context"]
+        },
         "claim":              { "$ref": "#/$defs/evidence_statement" },
         "evidence_refs": {
           "type": "array",
           "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
         },
         "support_strength":        { "$ref": "#/$defs/support_strength" },
+        "support_reason":          { "type": "string" },
+        "scope_boundary":          { "type": ["string", "null"] },
+        "unsupported_stronger_claim": {
+          "type": ["string", "null"],
+          "description": "A stronger conclusion that the current evidence does not justify."
+        },
         "what_would_strengthen_it":{ "type": "string" }
+      }
+    },
+
+    "novelty_verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "paper_relative_delta", "field_novelty", "evidence_refs"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["paper_only", "not_externally_verified", "targeted_external_check", "externally_verified"]
+        },
+        "paper_relative_delta": {
+          "type": ["string", "null"],
+          "description": "What the paper changes relative to the prior work it discusses."
+        },
+        "field_novelty": {
+          "type": ["string", "null"],
+          "description": "Only populate after external novelty verification. Otherwise null."
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+        }
       }
     },
 
@@ -367,7 +555,7 @@
         },
         "fragile_assumptions": {
           "type": "array",
-          "description": "High-risk assumptions whose failure would invalidate the core claim. Each item mirrors a high_risk entry from method_summary.assumptions, with a plain-language explanation of the failure mode.",
+          "description": "High-risk assumptions whose failure would invalidate the core claim. Each item mirrors a method_summary.assumptions item with risk_level = high, with a plain-language explanation of the failure mode.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -484,11 +672,13 @@
         "paper_id",
         "identity",
         "evidence_grade",
+        "source_boundary",
         "evidence_refs",
         "paper_map",
         "research_question",
         "method_summary",
         "contributions",
+        "novelty_verification",
         "evaluation_or_findings",
         "limitations_or_unknowns",
         "uncertainties",
@@ -503,6 +693,7 @@
         "paper_id":   { "type": "string" },
         "identity":   { "$ref": "#/$defs/paper_identity" },
         "evidence_grade": { "$ref": "#/$defs/evidence_grade" },
+        "source_boundary": { "$ref": "#/$defs/source_boundary" },
         "evidence_refs": {
           "type": "array",
           "items": { "$ref": "#/$defs/evidence_ref" }
@@ -514,6 +705,7 @@
           "type": "array",
           "items": { "$ref": "#/$defs/evidence_statement" }
         },
+        "novelty_verification": { "$ref": "#/$defs/novelty_verification" },
         "evaluation_or_findings": {
           "type": "array",
           "items": { "$ref": "#/$defs/evidence_statement" }

@@ -6,10 +6,23 @@ Codex skill for evidence-grounded academic paper deep reading in PaperScope.
 
 - `SKILL.md` — main workflow, reading mode routing, and boundaries.
 - `references/evidence-rules.md` — evidence grading, statement status, downgrade rules, and protect rules.
-- `schemas/deep-reading-result.schema.json` — structured output contract (v1.1).
+- `schemas/deep-reading-result.schema.json` — structured output contract (v1.2).
 - `agents/openai.yaml` — agent metadata.
 
-## What's new in v1.1
+## What's new in v1.2
+
+v1.2 upgrades the skill from a strong deep-reading schema to a claim-level evidence-grounding protocol. The frontend can still render a simple six-stage report, while the JSON supports evidence panels behind important judgments.
+
+- **Source boundary** — each paper records `evidence_grade`, `evidence_coverage`, `locator_mode`, and `context_mode` separately.
+- **Locator modes** — distinguish `page_grounded`, `structure_grounded`, and `source_limited` evidence.
+- **Evidence refs split source from interpretation** — `snippet` is real parsed source text only; `paraphrase` is model interpretation.
+- **Two-axis assumptions** — assumptions now use `provenance` (`explicit` / `inferred`) plus independent `risk_level` (`low` / `medium` / `high`).
+- **Structured method modules** — modules capture purpose, input, operation, output, why needed, measured effect, and evidence refs.
+- **Claim-level support boundaries** — claims now include `claim_id`, importance, `support_reason`, `scope_boundary`, and `unsupported_stronger_claim`.
+- **Novelty verification split** — `paper_relative_delta` is separated from externally verified `field_novelty`.
+- **Core-claim weighted audit** — overall support is driven by core claim support, not a simple ratio of strong/weak claims.
+
+## What was added in v1.1
 
 - **Reading mode routing** — resolve `quick_summary`, `standard`, `reviewer_mode`, `followup_mode`, or `method_only` from `input.reading_goal` before starting analysis. Each mode adjusts required output sections and emphasis.
 - **Assumption fields** — `method_summary.assumptions` now captures explicit, inferred, and high-risk assumptions with a dedicated `assumption_item` type.
@@ -44,12 +57,21 @@ claim-evidence review, assumption auditing, or research follow-up workflows.
 
 ## Schema Compatibility
 
-v1.1 is not backwards-compatible with v1.0 outputs due to:
+v1.2 is not backwards-compatible with v1.1 outputs due to:
+- `schema_version` changed to `1.2`.
+- `paper_report.source_boundary` is required.
+- `evidence_ref` replaces mixed `note` with `source_type`, `locator_mode`, `source_block_id`, `snippet`, `paraphrase`, and `verification_status`.
+- `assumption_item.assumption_type` was replaced by `provenance` and `risk_level`.
+- `method_summary.main_modules` now uses structured module objects, not generic evidence statements.
+- `claim_evidence` items require `claim_id`, `importance`, `support_reason`, `scope_boundary`, and `unsupported_stronger_claim`.
+- `novelty_verification` is required.
+
+v1.1 was not backwards-compatible with v1.0 outputs due to:
 - `judgment_card.research_value` changed from `string` to `object`.
 - `method_summary.assumptions` is a new required field.
 - `critical_review.fragile_assumptions` is a new required field.
 - `paper_map.equations` is a new required field.
 - `input.reading_mode` is a new required field.
 
-If you have existing v1.0 outputs, use the v1.0 schema for validation and migrate
+If you have existing v1.0 or v1.1 outputs, use their original schema for validation and migrate
 gradually as you re-run analyses.
