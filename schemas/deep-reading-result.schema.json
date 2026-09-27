@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:paperscope:schemas:deep-reading-result:1.2",
+  "$id": "urn:paperscope:schemas:deep-reading-result:1.3",
   "title": "PaperScope AI Deep Reading Result",
-  "description": "Structured output contract for the PaperScope AI deep reading skill. Version 1.2 adds source boundary, evidence coverage, locator modes, snippet/paraphrase evidence refs, two-axis assumptions, claim-level support boundaries, and novelty verification.",
+  "description": "Structured output contract for PaperScope AI Deep Reading Skill v1.3.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,36 +15,66 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.2"
+      "const": "1.3"
     },
     "analysis_type": {
       "type": "string",
-      "enum": ["limited_reading", "deep_reading"]
+      "enum": [
+        "limited_reading",
+        "deep_reading"
+      ]
     },
     "input": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source_type", "reading_mode", "reading_goal", "user_question", "provided_materials"],
+      "required": [
+        "source_type",
+        "reading_mode",
+        "reading_goal",
+        "user_question",
+        "provided_materials"
+      ],
       "properties": {
         "source_type": {
           "type": "string",
-          "enum": ["title", "abstract", "parsed_text", "parsed_pdf", "url", "doi", "arxiv", "mixed"]
+          "enum": [
+            "title",
+            "abstract",
+            "parsed_text",
+            "parsed_pdf",
+            "url",
+            "doi",
+            "arxiv",
+            "mixed"
+          ]
         },
         "reading_mode": {
           "type": "string",
-          "enum": ["quick_summary", "standard", "reviewer_mode", "followup_mode", "method_only"],
-          "description": "Resolved reading mode. Governs which output sections are required and where emphasis is placed."
+          "enum": [
+            "quick_summary",
+            "standard",
+            "reviewer_mode",
+            "followup_mode",
+            "method_only"
+          ]
         },
         "reading_goal": {
-          "type": ["string", "null"],
-          "description": "Raw user-stated goal or intent, before resolution to reading_mode."
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "user_question": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "provided_materials": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -52,22 +82,29 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 5,
-      "description": "Up to 5 papers per call. For larger sets, run multiple calls and merge at the application layer.",
-      "items": { "$ref": "#/$defs/paper_report" }
+      "items": {
+        "$ref": "#/$defs/paper_report"
+      }
     },
     "global_limitations": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     }
   },
-
   "$defs": {
-
     "paper_type": {
       "type": "string",
-      "enum": ["method", "empirical", "theory", "review", "general", "unknown"]
+      "enum": [
+        "method",
+        "empirical",
+        "theory",
+        "review",
+        "general",
+        "unknown"
+      ]
     },
-
     "evidence_grade": {
       "type": "string",
       "enum": [
@@ -77,106 +114,206 @@
         "E3_BODY_PLUS_ARTIFACTS"
       ]
     },
-
     "statement_status": {
       "type": "string",
-      "enum": ["reported", "inferred", "unknown"]
+      "enum": [
+        "reported",
+        "inferred",
+        "unknown"
+      ]
     },
-
     "support_strength": {
       "type": "string",
-      "enum": ["strong", "moderate", "weak", "missing", "overclaimed", "not_applicable"]
+      "enum": [
+        "strong",
+        "moderate",
+        "weak",
+        "missing",
+        "overclaimed",
+        "not_applicable"
+      ]
     },
-
     "assumption_provenance": {
       "type": "string",
-      "enum": ["explicit", "inferred"],
-      "description": "Whether the assumption is directly stated by the paper or inferred from the inspected material."
+      "enum": [
+        "explicit",
+        "inferred"
+      ]
     },
-
     "risk_level": {
       "type": "string",
-      "enum": ["low", "medium", "high"],
-      "description": "How severely the paper's core claim would be affected if the assumption fails."
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
     },
-
     "locator_mode": {
       "type": "string",
-      "enum": ["page_grounded", "structure_grounded", "source_limited"],
-      "description": "Highest reliable locator precision available for this evidence."
+      "enum": [
+        "page_grounded",
+        "structure_grounded",
+        "source_limited"
+      ]
     },
-
     "context_mode": {
       "type": "string",
-      "enum": ["paper_only", "targeted_external_check", "externally_verified"],
-      "description": "Whether analysis uses only the paper, targeted external checks, or independently verified external context."
+      "enum": [
+        "paper_only",
+        "targeted_external_check",
+        "externally_verified"
+      ]
     },
-
     "coverage_level": {
       "type": "string",
-      "enum": ["sufficient", "partial", "limited"]
+      "enum": [
+        "sufficient",
+        "partial",
+        "limited"
+      ]
     },
-
+    "external_verification_status": {
+      "type": "string",
+      "enum": [
+        "not_checked",
+        "not_applicable",
+        "partially_verified",
+        "verified",
+        "conflicted"
+      ]
+    },
+    "open_question_origin": {
+      "type": "string",
+      "enum": [
+        "author_stated",
+        "analysis_derived"
+      ]
+    },
     "evidence_material": {
       "type": "string",
       "enum": [
         "metadata",
         "abstract",
         "body_text",
-        "methods",
-        "experiments",
         "figures",
         "tables",
         "equations",
         "appendix",
         "supplement",
-        "external_context"
+        "references",
+        "external_sources",
+        "code",
+        "dataset"
       ]
     },
-
     "evidence_coverage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["level", "available", "missing", "note"],
+      "required": [
+        "level",
+        "available_materials",
+        "missing_materials",
+        "note"
+      ],
       "properties": {
-        "level": { "$ref": "#/$defs/coverage_level" },
-        "available": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/evidence_material" }
+        "level": {
+          "$ref": "#/$defs/coverage_level"
         },
-        "missing": {
+        "available_materials": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_material" }
+          "items": {
+            "$ref": "#/$defs/evidence_material"
+          }
         },
-        "note": { "type": ["string", "null"] }
+        "missing_materials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_material"
+          }
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-
     "source_boundary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["evidence_grade", "evidence_coverage", "locator_mode", "context_mode"],
+      "required": [
+        "evidence_grade",
+        "evidence_coverage",
+        "locator_mode",
+        "context_mode",
+        "boundary_note"
+      ],
       "properties": {
-        "evidence_grade": { "$ref": "#/$defs/evidence_grade" },
-        "evidence_coverage": { "$ref": "#/$defs/evidence_coverage" },
-        "locator_mode": { "$ref": "#/$defs/locator_mode" },
-        "context_mode": { "$ref": "#/$defs/context_mode" }
+        "evidence_grade": {
+          "$ref": "#/$defs/evidence_grade"
+        },
+        "evidence_coverage": {
+          "$ref": "#/$defs/evidence_coverage"
+        },
+        "locator_mode": {
+          "$ref": "#/$defs/locator_mode"
+        },
+        "context_mode": {
+          "$ref": "#/$defs/context_mode"
+        },
+        "boundary_note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-
     "location": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["section", "page", "figure", "table", "equation"],
+      "required": [
+        "section",
+        "page",
+        "figure",
+        "table",
+        "equation"
+      ],
       "properties": {
-        "section": { "type": ["string", "null"] },
-        "page":    { "type": ["integer", "null"], "minimum": 1 },
-        "figure":  { "type": ["string", "null"] },
-        "table":   { "type": ["string", "null"] },
-        "equation":{ "type": ["string", "null"] }
+        "section": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "figure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "table": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "equation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-
     "evidence_ref": {
       "type": "object",
       "additionalProperties": false,
@@ -184,6 +321,7 @@
         "id",
         "source_type",
         "evidence_type",
+        "source",
         "locator_mode",
         "location",
         "source_block_id",
@@ -198,7 +336,11 @@
         },
         "source_type": {
           "type": "string",
-          "enum": ["paper", "metadata", "external", "user_provided", "parser"]
+          "enum": [
+            "paper",
+            "external",
+            "user_material"
+          ]
         },
         "evidence_type": {
           "type": "string",
@@ -212,49 +354,100 @@
             "equation",
             "appendix",
             "supplement",
-            "external_context"
+            "external_context",
+            "user_excerpt"
           ]
         },
-        "locator_mode": { "$ref": "#/$defs/locator_mode" },
-        "location": { "$ref": "#/$defs/location" },
+        "source": {
+          "type": "string"
+        },
+        "locator_mode": {
+          "$ref": "#/$defs/locator_mode"
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        },
         "source_block_id": {
-          "type": ["string", "null"],
-          "description": "Stable upstream source block id when available."
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "snippet": {
-          "type": ["string", "null"],
-          "description": "Short verbatim source excerpt from parsed material only. Null when no real excerpt is available."
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Short verbatim source excerpt only. Never model-generated."
         },
         "paraphrase": {
-          "type": ["string", "null"],
-          "description": "Concise model paraphrase of the source. Must not be presented as source text."
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Model summary of the source, never presented as original text."
         },
         "verification_status": {
           "type": "string",
-          "enum": ["verified", "needs_verification", "unavailable"]
+          "enum": [
+            "verified",
+            "needs_verification",
+            "unavailable"
+          ],
+          "description": "Verification of source excerpt/locator, not scientific replication."
         }
       }
     },
-
     "evidence_statement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["text", "status", "evidence_refs", "support_strength"],
+      "description": "reported = paper-explicit; inferred = grounded analysis; unknown = genuine non-establishment only.",
+      "required": [
+        "text",
+        "status",
+        "evidence_refs",
+        "support_strength"
+      ],
       "properties": {
-        "text":             { "type": "string" },
-        "status":           { "$ref": "#/$defs/statement_status" },
+        "text": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/statement_status"
+        },
         "evidence_refs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         },
-        "support_strength": { "$ref": "#/$defs/support_strength" }
+        "support_strength": {
+          "$ref": "#/$defs/support_strength"
+        }
       }
     },
-
+    "claim_statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "status"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/statement_status"
+        }
+      }
+    },
     "assumption_item": {
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "assumption_id",
         "assumption_text",
         "provenance",
         "risk_level",
@@ -264,72 +457,168 @@
         "testability"
       ],
       "properties": {
-        "assumption_text": {
+        "assumption_id": {
           "type": "string",
-          "description": "Plain-language statement of the assumption."
+          "pattern": "^as-[0-9]{3,}$"
         },
-        "provenance":      { "$ref": "#/$defs/assumption_provenance" },
-        "risk_level":      { "$ref": "#/$defs/risk_level" },
-        "status":          { "$ref": "#/$defs/statement_status" },
+        "assumption_text": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/assumption_provenance"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/risk_level"
+        },
+        "status": {
+          "$ref": "#/$defs/statement_status"
+        },
         "evidence_refs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         },
         "failure_mode": {
-          "type": ["string", "null"],
-          "description": "What breaks if the assumption fails. Required in substance for high-risk assumptions."
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "testability": {
-          "type": ["string", "null"],
-          "description": "How the assumption could be checked or stress-tested."
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
-
     "paper_identity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "authors", "venue", "year", "doi", "arxiv", "url", "file_id", "version_note"],
+      "required": [
+        "title",
+        "authors",
+        "venue",
+        "year",
+        "doi",
+        "arxiv",
+        "url",
+        "file_id",
+        "version_note"
+      ],
       "properties": {
-        "title":        { "type": ["string", "null"] },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "authors": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "venue":        { "type": ["string", "null"] },
-        "year":         { "type": ["integer", "null"] },
-        "doi":          { "type": ["string", "null"] },
-        "arxiv":        { "type": ["string", "null"] },
-        "url":          { "type": ["string", "null"] },
-        "file_id":      { "type": ["string", "null"] },
-        "version_note": { "type": ["string", "null"] }
+        "venue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "doi": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "arxiv": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version_note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-
     "section_item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "summary", "location"],
+      "required": [
+        "title",
+        "summary",
+        "location"
+      ],
       "properties": {
-        "title":    { "type": "string" },
-        "summary":  { "type": "string" },
-        "location": { "$ref": "#/$defs/location" }
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        }
       }
     },
-
     "located_item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["label", "caption_or_title", "role", "location", "inspected"],
+      "required": [
+        "label",
+        "caption_or_title",
+        "role",
+        "location",
+        "inspected"
+      ],
       "properties": {
-        "label":            { "type": "string" },
-        "caption_or_title": { "type": ["string", "null"] },
-        "role":             { "type": ["string", "null"] },
-        "location":         { "$ref": "#/$defs/location" },
-        "inspected":        { "type": "boolean" }
+        "label": {
+          "type": "string"
+        },
+        "caption_or_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "location": {
+          "$ref": "#/$defs/location"
+        },
+        "inspected": {
+          "type": "boolean"
+        }
       }
     },
-
     "paper_map": {
       "type": "object",
       "additionalProperties": false,
@@ -342,43 +631,76 @@
         "equations",
         "datasets",
         "metrics",
+        "baselines",
+        "ablations",
         "main_references"
       ],
       "properties": {
-        "paper_type":       { "$ref": "#/$defs/paper_type" },
-        "abstract_summary": { "type": ["string", "null"] },
+        "paper_type": {
+          "$ref": "#/$defs/paper_type"
+        },
+        "abstract_summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "section_outline": {
           "type": "array",
-          "items": { "$ref": "#/$defs/section_item" }
+          "items": {
+            "$ref": "#/$defs/section_item"
+          }
         },
         "figures": {
           "type": "array",
-          "items": { "$ref": "#/$defs/located_item" }
+          "items": {
+            "$ref": "#/$defs/located_item"
+          }
         },
         "tables": {
           "type": "array",
-          "items": { "$ref": "#/$defs/located_item" }
+          "items": {
+            "$ref": "#/$defs/located_item"
+          }
         },
         "equations": {
           "type": "array",
-          "description": "Key equations or theorems inspected. Especially important for theory and method papers.",
-          "items": { "$ref": "#/$defs/located_item" }
+          "items": {
+            "$ref": "#/$defs/located_item"
+          }
         },
         "datasets": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "metrics": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
+        },
+        "baselines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ablations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "main_references": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
-
     "method_module_item": {
       "type": "object",
       "additionalProperties": false,
@@ -393,23 +715,54 @@
         "evidence_refs"
       ],
       "properties": {
-        "module_name": { "type": "string" },
-        "purpose": { "type": ["string", "null"] },
-        "input": { "type": ["string", "null"] },
-        "operation": { "type": ["string", "null"] },
-        "output": { "type": ["string", "null"] },
-        "why_needed": { "type": ["string", "null"] },
+        "module_name": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "why_needed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "measured_effect": {
-          "type": ["string", "null"],
-          "description": "Reported ablation or experiment effect if inspected. Null if not established."
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "evidence_refs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         }
       }
     },
-
     "method_summary": {
       "type": "object",
       "additionalProperties": false,
@@ -423,23 +776,35 @@
         "assumptions"
       ],
       "properties": {
-        "summary":           { "$ref": "#/$defs/evidence_statement" },
-        "previous_approach": { "$ref": "#/$defs/evidence_statement" },
-        "proposed_change":   { "$ref": "#/$defs/evidence_statement" },
-        "mechanism":         { "$ref": "#/$defs/evidence_statement" },
-        "expected_benefit":  { "$ref": "#/$defs/evidence_statement" },
+        "summary": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "previous_approach": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "proposed_change": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "mechanism": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "expected_benefit": {
+          "$ref": "#/$defs/evidence_statement"
+        },
         "main_modules": {
           "type": "array",
-          "items": { "$ref": "#/$defs/method_module_item" }
+          "items": {
+            "$ref": "#/$defs/method_module_item"
+          }
         },
         "assumptions": {
           "type": "array",
-          "description": "Explicit or inferred assumptions identified in the method, with independent risk levels. High-risk assumptions must also appear in critical_review.fragile_assumptions.",
-          "items": { "$ref": "#/$defs/assumption_item" }
+          "items": {
+            "$ref": "#/$defs/assumption_item"
+          }
         }
       }
     },
-
     "claim_evidence_item": {
       "type": "object",
       "additionalProperties": false,
@@ -448,11 +813,12 @@
         "importance",
         "claim",
         "evidence_refs",
-        "support_strength",
+        "paper_internal_support",
         "support_reason",
         "scope_boundary",
         "unsupported_stronger_claim",
-        "what_would_strengthen_it"
+        "what_would_strengthen_it",
+        "external_verification_status"
       ],
       "properties": {
         "claim_id": {
@@ -461,194 +827,392 @@
         },
         "importance": {
           "type": "string",
-          "enum": ["core", "secondary", "context"]
+          "enum": [
+            "core",
+            "secondary",
+            "context"
+          ]
         },
-        "claim":              { "$ref": "#/$defs/evidence_statement" },
+        "claim": {
+          "$ref": "#/$defs/claim_statement"
+        },
         "evidence_refs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         },
-        "support_strength":        { "$ref": "#/$defs/support_strength" },
-        "support_reason":          { "type": "string" },
-        "scope_boundary":          { "type": ["string", "null"] },
+        "paper_internal_support": {
+          "$ref": "#/$defs/support_strength"
+        },
+        "support_reason": {
+          "type": "string"
+        },
+        "scope_boundary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "unsupported_stronger_claim": {
-          "type": ["string", "null"],
-          "description": "A stronger conclusion that the current evidence does not justify."
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "what_would_strengthen_it":{ "type": "string" }
-      }
-    },
-
-    "novelty_verification": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "paper_relative_delta", "field_novelty", "evidence_refs"],
-      "properties": {
-        "status": {
+        "what_would_strengthen_it": {
           "type": "string",
-          "enum": ["paper_only", "not_externally_verified", "targeted_external_check", "externally_verified"]
+          "minLength": 1
         },
-        "paper_relative_delta": {
-          "type": ["string", "null"],
-          "description": "What the paper changes relative to the prior work it discusses."
-        },
-        "field_novelty": {
-          "type": ["string", "null"],
-          "description": "Only populate after external novelty verification. Otherwise null."
-        },
-        "evidence_refs": {
-          "type": "array",
-          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+        "external_verification_status": {
+          "$ref": "#/$defs/external_verification_status"
         }
       }
     },
-
+    "novelty_verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "paper_relative_delta",
+        "field_novelty"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "paper_only",
+            "not_externally_verified",
+            "targeted_external_check",
+            "externally_verified"
+          ]
+        },
+        "paper_relative_delta": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "field_novelty": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/evidence_statement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
     "evidence_audit": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "overall_support",
+        "paper_internal_support",
+        "external_verification_status",
         "strongly_supported",
         "weakly_supported",
         "unsupported_or_overclaimed",
         "missing_evidence"
       ],
       "properties": {
-        "overall_support": {
+        "paper_internal_support": {
           "type": "string",
-          "enum": ["strong", "moderate", "weak", "insufficient"]
+          "enum": [
+            "strong",
+            "moderate",
+            "weak",
+            "insufficient"
+          ]
+        },
+        "external_verification_status": {
+          "$ref": "#/$defs/external_verification_status"
         },
         "strongly_supported": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
         "weakly_supported": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
         "unsupported_or_overclaimed": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
         "missing_evidence": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
-
+    "fragile_assumption_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assumption_id",
+        "failure_mode",
+        "evidence_refs"
+      ],
+      "properties": {
+        "assumption_id": {
+          "type": "string",
+          "pattern": "^as-[0-9]{3,}$"
+        },
+        "failure_mode": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        }
+      }
+    },
     "critical_review": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "main_limitations",
+        "analysis_limitations",
         "fragile_assumptions",
         "reviewer_questions",
         "reproducibility_risks",
-        "evaluation_risks"
+        "evaluation_risks",
+        "applicability_boundary"
       ],
       "properties": {
-        "main_limitations": {
+        "analysis_limitations": {
           "type": "array",
-          "description": "Scope, generalization, and result limitations grounded in inspected material.",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
         "fragile_assumptions": {
           "type": "array",
-          "description": "High-risk assumptions whose failure would invalidate the core claim. Each item mirrors a method_summary.assumptions item with risk_level = high, with a plain-language explanation of the failure mode.",
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["assumption_text", "failure_mode", "evidence_refs"],
-            "properties": {
-              "assumption_text": { "type": "string" },
-              "failure_mode": {
-                "type": "string",
-                "description": "What breaks, and how severely, if this assumption does not hold."
-              },
-              "evidence_refs": {
-                "type": "array",
-                "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
-              }
-            }
+            "$ref": "#/$defs/fragile_assumption_item"
           }
         },
         "reviewer_questions": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "reproducibility_risks": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "evaluation_risks": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
+        },
+        "applicability_boundary": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         }
       }
     },
-
     "open_question_item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["question", "why_it_matters", "suggested_next_step", "status", "evidence_refs"],
+      "required": [
+        "question",
+        "origin",
+        "why_it_matters",
+        "suggested_validation",
+        "evidence_refs"
+      ],
       "properties": {
-        "question":           { "type": "string" },
-        "why_it_matters":     { "type": "string" },
-        "suggested_next_step":{ "type": "string" },
-        "status":             { "$ref": "#/$defs/statement_status" },
+        "question": {
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/open_question_origin"
+        },
+        "why_it_matters": {
+          "type": "string"
+        },
+        "suggested_validation": {
+          "type": "string"
+        },
         "evidence_refs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^ev-[0-9]{3,}$" }
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         }
       }
     },
-
-    "research_value_breakdown": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["methodological", "empirical", "application"],
-      "description": "Separate research value ratings for different reader perspectives.",
-      "properties": {
-        "methodological": {
-          "type": "string",
-          "enum": ["high", "medium", "low", "unclear"],
-          "description": "Value for researchers developing new methods or algorithms."
-        },
-        "empirical": {
-          "type": "string",
-          "enum": ["high", "medium", "low", "unclear"],
-          "description": "Value for researchers needing benchmarks, datasets, or empirical findings."
-        },
-        "application": {
-          "type": "string",
-          "enum": ["high", "medium", "low", "unclear"],
-          "description": "Value for practitioners applying the work to real systems."
-        }
-      }
-    },
-
-    "judgment_card": {
+    "reading_guide_item": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "one_sentence_takeaway",
-        "evidence_strength",
-        "research_value",
-        "reading_priority",
-        "who_should_read"
+        "priority",
+        "target_type",
+        "target_label",
+        "reason",
+        "evidence_refs"
       ],
       "properties": {
-        "one_sentence_takeaway": { "type": "string" },
-        "evidence_strength": {
+        "priority": {
           "type": "string",
-          "enum": ["strong", "moderate", "weak", "insufficient"]
+          "enum": [
+            "must_read",
+            "recommended",
+            "skim"
+          ]
         },
-        "research_value": {
-          "$ref": "#/$defs/research_value_breakdown",
-          "description": "Multi-dimensional research value. Replaces the single high/medium/low field from v1.0."
+        "target_type": {
+          "type": "string",
+          "enum": [
+            "section",
+            "figure",
+            "table",
+            "equation",
+            "appendix",
+            "general"
+          ]
         },
-        "reading_priority": {
+        "target_label": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        }
+      }
+    },
+    "reading_guide": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "twenty_minute_path"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reading_guide_item"
+          }
+        },
+        "twenty_minute_path": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contradiction_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contradiction_id",
+        "description",
+        "evidence_refs",
+        "impact",
+        "resolution_needed"
+      ],
+      "properties": {
+        "contradiction_id": {
+          "type": "string",
+          "pattern": "^cx-[0-9]{3,}$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "impact": {
+          "type": "string"
+        },
+        "resolution_needed": {
+          "type": "string"
+        }
+      }
+    },
+    "research_value_dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "rationale"
+      ],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low",
+            "unclear",
+            "not_applicable"
+          ]
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "research_value_breakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "methodological",
+        "empirical",
+        "application"
+      ],
+      "properties": {
+        "methodological": {
+          "$ref": "#/$defs/research_value_dimension"
+        },
+        "empirical": {
+          "$ref": "#/$defs/research_value_dimension"
+        },
+        "application": {
+          "$ref": "#/$defs/research_value_dimension"
+        }
+      }
+    },
+    "reading_priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "reason"
+      ],
+      "properties": {
+        "level": {
           "type": "string",
           "enum": [
             "must_read",
@@ -658,20 +1222,54 @@
             "insufficient_evidence"
           ]
         },
-        "who_should_read": {
-          "type": "array",
-          "items": { "type": "string" }
+        "reason": {
+          "type": "string"
         }
       }
     },
-
+    "judgment_card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "one_sentence_takeaway",
+        "paper_internal_evidence_strength",
+        "research_value",
+        "reading_priority",
+        "who_should_read"
+      ],
+      "properties": {
+        "one_sentence_takeaway": {
+          "type": "string"
+        },
+        "paper_internal_evidence_strength": {
+          "type": "string",
+          "enum": [
+            "strong",
+            "moderate",
+            "weak",
+            "insufficient"
+          ]
+        },
+        "research_value": {
+          "$ref": "#/$defs/research_value_breakdown"
+        },
+        "reading_priority": {
+          "$ref": "#/$defs/reading_priority"
+        },
+        "who_should_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "paper_report": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "paper_id",
         "identity",
-        "evidence_grade",
         "source_boundary",
         "evidence_refs",
         "paper_map",
@@ -680,57 +1278,99 @@
         "contributions",
         "novelty_verification",
         "evaluation_or_findings",
-        "limitations_or_unknowns",
-        "uncertainties",
+        "author_acknowledged_limitations",
+        "unresolved_unknowns",
         "claim_evidence",
         "evidence_audit",
         "critical_review",
         "open_questions",
+        "reading_guide",
+        "contradictions",
         "judgment_card"
       ],
-      "description": "In quick_summary mode, only research_question and judgment_card carry substantive analysis. Other required fields must still be present as empty arrays or valid placeholder objects that satisfy this schema.",
       "properties": {
-        "paper_id":   { "type": "string" },
-        "identity":   { "$ref": "#/$defs/paper_identity" },
-        "evidence_grade": { "$ref": "#/$defs/evidence_grade" },
-        "source_boundary": { "$ref": "#/$defs/source_boundary" },
+        "paper_id": {
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/paper_identity"
+        },
+        "source_boundary": {
+          "$ref": "#/$defs/source_boundary"
+        },
         "evidence_refs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_ref" }
+          "items": {
+            "$ref": "#/$defs/evidence_ref"
+          }
         },
-        "paper_map":          { "$ref": "#/$defs/paper_map" },
-        "research_question":  { "$ref": "#/$defs/evidence_statement" },
-        "method_summary":     { "$ref": "#/$defs/method_summary" },
+        "paper_map": {
+          "$ref": "#/$defs/paper_map"
+        },
+        "research_question": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "method_summary": {
+          "$ref": "#/$defs/method_summary"
+        },
         "contributions": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
-        "novelty_verification": { "$ref": "#/$defs/novelty_verification" },
+        "novelty_verification": {
+          "$ref": "#/$defs/novelty_verification"
+        },
         "evaluation_or_findings": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
-        "limitations_or_unknowns": {
+        "author_acknowledged_limitations": {
           "type": "array",
-          "items": { "$ref": "#/$defs/evidence_statement" }
+          "items": {
+            "$ref": "#/$defs/evidence_statement"
+          }
         },
-        "uncertainties": {
+        "unresolved_unknowns": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "claim_evidence": {
           "type": "array",
-          "items": { "$ref": "#/$defs/claim_evidence_item" }
+          "items": {
+            "$ref": "#/$defs/claim_evidence_item"
+          }
         },
-        "evidence_audit":  { "$ref": "#/$defs/evidence_audit" },
-        "critical_review": { "$ref": "#/$defs/critical_review" },
+        "evidence_audit": {
+          "$ref": "#/$defs/evidence_audit"
+        },
+        "critical_review": {
+          "$ref": "#/$defs/critical_review"
+        },
         "open_questions": {
           "type": "array",
-          "items": { "$ref": "#/$defs/open_question_item" }
+          "items": {
+            "$ref": "#/$defs/open_question_item"
+          }
         },
-        "judgment_card": { "$ref": "#/$defs/judgment_card" }
+        "reading_guide": {
+          "$ref": "#/$defs/reading_guide"
+        },
+        "contradictions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contradiction_item"
+          }
+        },
+        "judgment_card": {
+          "$ref": "#/$defs/judgment_card"
+        }
       }
     }
-
   }
 }

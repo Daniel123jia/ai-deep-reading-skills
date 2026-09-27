@@ -1,77 +1,191 @@
 # PaperScope AI Deep Reading Skill
 
-Codex skill for evidence-grounded academic paper deep reading in PaperScope.
+Evidence-grounded academic paper deep reading for PaperScope / Scholar AI.
 
-## Contents
+Version: **1.3.0**
 
-- `SKILL.md` — main workflow, reading mode routing, and boundaries.
-- `references/evidence-rules.md` — evidence grading, statement status, downgrade rules, and protect rules.
-- `schemas/deep-reading-result.schema.json` — structured output contract (v1.2).
+## What this skill does
+
+It turns parsed paper content into a structured deep-reading result that supports:
+
+- research problem and gap analysis;
+- method and mechanism reconstruction;
+- assumption auditing;
+- contribution and novelty-boundary analysis;
+- claim → evidence → support → scope mapping;
+- author-vs-analysis limitation separation;
+- reviewer-style critical reading;
+- open questions with bounded validation ideas;
+- original-paper reading guidance;
+- contradiction and evidence-mismatch tracking.
+
+The skill does **not** parse PDFs, retrieve papers, format Word documents, rank papers, or predict acceptance.
+
+## Files
+
+- `SKILL.md` — main workflow and boundaries.
+- `references/evidence-rules.md` — evidence semantics and support rules.
+- `references/schema-invariants.md` — semantic invariants beyond JSON Schema.
+- `references/rendering-guidance.md` — mapping from backend JSON to polished user-facing reports.
+- `schemas/deep-reading-result.schema.json` — v1.3 structured output contract.
+- `scripts/validate_result.py` — schema + semantic validator.
 - `agents/openai.yaml` — agent metadata.
+- `examples/minimal-v1.3.json` — valid compact example.
+- `CHANGELOG.md` — version history.
 
-## What's new in v1.2
+## v1.3 highlights
 
-v1.2 upgrades the skill from a strong deep-reading schema to a claim-level evidence-grounding protocol. The frontend can still render a simple six-stage report, while the JSON supports evidence panels behind important judgments.
+v1.3 is a consistency and completeness upgrade based on real report testing.
 
-- **Source boundary** — each paper records `evidence_grade`, `evidence_coverage`, `locator_mode`, and `context_mode` separately.
-- **Locator modes** — distinguish `page_grounded`, `structure_grounded`, and `source_limited` evidence.
-- **Evidence refs split source from interpretation** — `snippet` is real parsed source text only; `paraphrase` is model interpretation.
-- **Two-axis assumptions** — assumptions now use `provenance` (`explicit` / `inferred`) plus independent `risk_level` (`low` / `medium` / `high`).
-- **Structured method modules** — modules capture purpose, input, operation, output, why needed, measured effect, and evidence refs.
-- **Claim-level support boundaries** — claims now include `claim_id`, importance, `support_reason`, `scope_boundary`, and `unsupported_stronger_claim`.
-- **Novelty verification split** — `paper_relative_delta` is separated from externally verified `field_novelty`.
-- **Core-claim weighted audit** — overall support is driven by core claim support, not a simple ratio of strong/weak claims.
+### 1. Strict status semantics
 
-## What was added in v1.1
+`unknown` is no longer a safe default. Detailed supported method/result statements must be `reported` or `inferred`.
 
-- **Reading mode routing** — resolve `quick_summary`, `standard`, `reviewer_mode`, `followup_mode`, or `method_only` from `input.reading_goal` before starting analysis. Each mode adjusts required output sections and emphasis.
-- **Assumption fields** — `method_summary.assumptions` now captures explicit, inferred, and high-risk assumptions with a dedicated `assumption_item` type.
-- **Fragile assumptions** — `critical_review.fragile_assumptions` surfaces high-risk assumptions separately from general limitations, with a required `failure_mode` explanation.
-- **Equations support** — `paper_map.equations` tracks key equations and theorems as first-class inspected items alongside figures and tables.
-- **Multi-dimensional judgment card** — `judgment_card.research_value` is now a breakdown object with `methodological`, `empirical`, and `application` dimensions instead of a single score.
-- **Protect rules** — `references/evidence-rules.md` adds explicit protect rules to prevent over-downgrading well-supported results.
-- **`reading_mode` in input** — `input.reading_mode` records the resolved mode for downstream rendering.
-- **Schema `$id` fix** — changed from `paperscope.local` to a `urn:` identifier for portability.
-- **5-paper limit explanation** — documented in both `SKILL.md` and `agents/openai.yaml`.
+### 2. Source-boundary consistency
+
+`structure_grounded` cannot emit PDF page numbers. Locator strength must match the declared boundary.
+
+### 3. Internal evidence vs external verification
+
+A claim now records:
+
+- `paper_internal_support`;
+- `external_verification_status`.
+
+Lack of third-party replication does not automatically weaken a direct within-paper comparison.
+
+### 4. Author limitations vs PaperScope criticism
+
+- `author_acknowledged_limitations` = author-explicit only.
+- `critical_review.analysis_limitations` = agent/PaperScope analysis.
+
+### 5. Better Claim–Evidence records
+
+Claim evidence is no longer duplicated inside nested evidence statements. Claims include:
+
+- stable id;
+- importance;
+- evidence refs;
+- internal support;
+- support reason;
+- scope boundary;
+- unsupported stronger claim;
+- concrete strengthening action;
+- external verification status.
+
+### 6. Open questions and reading guide
+
+Standard E2/E3 deep readings should derive useful open questions when defensible and provide a must-read / recommended / skim reading guide plus a 20-minute path.
+
+### 7. Stable assumption links
+
+Assumptions now have `assumption_id`, allowing section 03 assumptions to link cleanly to section 05 fragile-assumption failure modes.
+
+### 8. Contradiction tracking
+
+Conflicting source values/statements are preserved and surfaced rather than silently reconciled.
+
+### 9. Human-readable rendering guidance
+
+Raw backend enums should not appear repeatedly in formal Word/Markdown reports.
+
+### 10. Semantic validator
+
+Run:
+
+```bash
+python scripts/validate_result.py result.json
+```
+
+It checks both JSON Schema and semantic invariants such as:
+
+- unresolved evidence ids;
+- locator-mode conflicts;
+- reported statements without evidence;
+- high-risk assumption links;
+- novelty/context conflicts;
+- empty open questions/reading guide warnings;
+- suspicious quantitative claim/evidence mismatch;
+- reading-priority/support inconsistency.
 
 ## Install
 
-Copy this repository into:
+Copy the repository into your skill directory, for example:
 
-```
+```text
 $CODEX_HOME/skills/paperscope-ai-deep-reading
 ```
 
-Then use it when running AI paper deep reading, paper understanding, method analysis,
-claim-evidence review, assumption auditing, or research follow-up workflows.
+## Reading modes
 
-## Reading Modes
-
-| Mode | When to use |
+| Mode | Use |
 |---|---|
-| `quick_summary` | Fast triage — emphasizes judgment card and research question while preserving the full JSON shell |
-| `standard` | Default full deep reading |
-| `reviewer_mode` | Peer review prep — emphasizes critical review and evidence audit |
-| `followup_mode` | Research planning — emphasizes open questions and contributions |
-| `method_only` | Technical deep-dive — emphasizes method, assumptions, and claims |
+| `quick_summary` | fast triage |
+| `standard` | default full deep reading |
+| `reviewer_mode` | peer-review preparation |
+| `followup_mode` | open questions and research follow-up |
+| `method_only` | technical method deep dive |
 
-## Schema Compatibility
+## Architecture
 
-v1.2 is not backwards-compatible with v1.1 outputs due to:
-- `schema_version` changed to `1.2`.
-- `paper_report.source_boundary` is required.
-- `evidence_ref` replaces mixed `note` with `source_type`, `locator_mode`, `source_block_id`, `snippet`, `paraphrase`, and `verification_status`.
-- `assumption_item.assumption_type` was replaced by `provenance` and `risk_level`.
-- `method_summary.main_modules` now uses structured module objects, not generic evidence statements.
-- `claim_evidence` items require `claim_id`, `importance`, `support_reason`, `scope_boundary`, and `unsupported_stronger_claim`.
-- `novelty_verification` is required.
+```text
+Title / DOI / arXiv / PDF
+        ↓
+Retriever + Parser
+        ↓
+Structured source bundle
+        ↓
+PaperScope AI Deep Reading Skill
+        ↓
+deep-reading-result.json v1.3
+        ↓
+Web renderer / Scholar Format Engine
+```
 
-v1.1 was not backwards-compatible with v1.0 outputs due to:
-- `judgment_card.research_value` changed from `string` to `object`.
-- `method_summary.assumptions` is a new required field.
-- `critical_review.fragile_assumptions` is a new required field.
-- `paper_map.equations` is a new required field.
-- `input.reading_mode` is a new required field.
+The deep-reading skill should not own Word typography or document export. A separate formatting/delivery layer should consume the structured result.
 
-If you have existing v1.0 or v1.1 outputs, use their original schema for validation and migrate
-gradually as you re-run analyses.
+## Six-stage UI mapping
+
+The backend can remain detailed while the user sees:
+
+1. 论文速览
+2. 研究问题与 Gap
+3. 核心方法与真实创新
+4. 实验与证据
+5. 批判性评价
+6. 开放问题与精读建议
+
+See `references/rendering-guidance.md`.
+
+## v1.2 → v1.3 migration
+
+v1.3 is intentionally not backward compatible with v1.2.
+
+Main changes:
+
+- removed duplicated top-level `paper_report.evidence_grade`; use `source_boundary.evidence_grade`;
+- added `source_boundary.boundary_note`;
+- assumptions require `assumption_id`;
+- claim nested object no longer carries its own evidence refs/support strength;
+- `claim_evidence.support_strength` → `paper_internal_support`;
+- claim adds `external_verification_status`;
+- `evidence_audit.overall_support` → `paper_internal_support`;
+- `judgment_card.evidence_strength` → `paper_internal_evidence_strength`;
+- research value dimensions now include `level + rationale`;
+- reading priority now includes `level + reason`;
+- `limitations_or_unknowns` removed;
+- added `author_acknowledged_limitations` and `unresolved_unknowns`;
+- `critical_review.main_limitations` → `analysis_limitations`;
+- open questions use `origin + suggested_validation` rather than statement status;
+- added `reading_guide`;
+- added `contradictions`.
+
+## Design principle
+
+The product should not merely say:
+
+> “AI thinks this paper is good.”
+
+It should be able to say:
+
+> “This is the judgment, this is the source, this is why the source supports it, this is the boundary, and this is what remains unverified.”

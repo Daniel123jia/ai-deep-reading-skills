@@ -1,13 +1,17 @@
 name: paperscope-ai-deep-reading
-version: 1.2.0
+version: 1.3.0
 description: >
-  Deep-read academic papers for PaperScope. Turns parsed paper content into
-  evidence-grounded structured analysis with source-boundary tracking,
-  claim-level evidence, assumption auditing, and reading mode routing.
+  Evidence-grounded academic paper deep reading for PaperScope / Scholar AI.
+  Produces structured claim-level analysis with strict provenance semantics,
+  source-boundary tracking, assumption auditing, author-vs-analysis limitation
+  separation, reading guidance, open questions, and semantic validation.
 
 skill_file: ../SKILL.md
 schema_file: ../schemas/deep-reading-result.schema.json
 evidence_rules_file: ../references/evidence-rules.md
+invariants_file: ../references/schema-invariants.md
+rendering_guidance_file: ../references/rendering-guidance.md
+validator_file: ../scripts/validate_result.py
 
 trigger_phrases:
   - AI paper deep reading
@@ -23,45 +27,39 @@ trigger_phrases:
 
 reading_modes:
   - id: quick_summary
-    description: One-card summary. Emphasizes judgment_card and research_question while preserving the full schema-required JSON shell.
+    description: Fast triage with grounding core preserved.
   - id: standard
-    description: Full deep reading report. Default mode.
+    description: Full evidence-grounded deep reading. Default mode.
   - id: reviewer_mode
-    description: Peer-review style. Emphasizes critical_review, claim_evidence, and evidence_audit.
+    description: Emphasizes critical review, claim-evidence, and evidence audit.
   - id: followup_mode
-    description: Research planning. Emphasizes open_questions, method_summary, and contributions.
+    description: Emphasizes open questions and bounded validation directions.
   - id: method_only
-    description: Technical deep-dive. Emphasizes method_summary, assumptions, and claim_evidence.
+    description: Emphasizes method, assumptions, mechanism, and claims.
 
 output:
-  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.2
-  secondary: optional human-readable summary when conversational output is requested
+  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.3
+  secondary: optional concise conversational summary
 
 constraints:
   max_papers_per_call: 5
   min_evidence_grade_for_deep_reading: E2_BODY_TEXT
-  schema_version: "1.2"
+  schema_version: "1.3"
   require_source_boundary: true
   require_claim_level_evidence: true
   forbid_generated_snippets: true
+  separate_internal_support_from_external_verification: true
+  separate_author_limitations_from_analysis_limitations: true
 
 model_notes: >
-  Always resolve reading_mode before starting analysis.
-  Always establish source_boundary: evidence grade, evidence coverage,
-  locator mode, and context mode.
-  Never fabricate evidence refs, locations, numbers, snippets, figures,
-  tables, equations, datasets, baselines, or citations.
-  Put verbatim source text only in snippet; if no inspected source text is
-  available, use snippet: null and provide a paraphrase or verification
-  suggestion instead.
-  Each important claim must include claim_id, importance, evidence refs,
-  support reason, scope boundary, unsupported stronger claim, and what would
-  strengthen it.
-  Separate paper-relative novelty from externally verified field novelty.
-  Do not claim field-level novelty, first-in-field status, or SOTA across the
-  field unless context_mode records external verification and evidence refs
-  support it.
-  Apply both downgrade rules and protect rules from evidence-rules.md.
-  High-risk assumptions are determined by risk_level, not provenance, and must
-  appear in both method_summary.assumptions
-  and critical_review.fragile_assumptions.
+  Do not use unknown as a safe default. If inspected material supports a specific
+  method/result/contribution statement, classify it as reported or inferred.
+  Establish source boundary before analysis and keep locator precision consistent.
+  Never fabricate evidence refs, locations, numbers, snippets, figures, tables,
+  equations, datasets, baselines, or citations. Paper-internal support and external
+  verification are independent. Lack of third-party replication does not by itself
+  downgrade a direct within-paper result. High-risk assumptions must link by stable
+  assumption_id to fragile-assumption analysis. Author-acknowledged limitations and
+  agent-derived limitations must be separate. Standard E2/E3 readings should derive
+  useful open questions and a reading guide when defensible. Run the validator when
+  available before final delivery.
