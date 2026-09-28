@@ -67,7 +67,8 @@ def main() -> int:
     warnings: list[str] = []
 
     if jsonschema is not None:
-        validator = jsonschema.Draft202012Validator(schema)
+        resolver = jsonschema.RefResolver("#", schema, store={"#": schema, schema.get("$id", ""): schema})
+        validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
         for e in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path)):
             loc = "$" + "".join(f"[{p}]" if isinstance(p, int) else f".{p}" for p in e.absolute_path)
             errors.append(f"schema {loc}: {e.message}")
