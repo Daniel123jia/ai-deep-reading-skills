@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:paperscope:schemas:deep-reading-result:1.3",
+  "$id": "urn:paperscope:schemas:deep-reading-result:1.4",
   "title": "PaperScope AI Deep Reading Result",
-  "description": "Structured output contract for PaperScope AI Deep Reading Skill v1.3.",
+  "description": "PaperScope AI Deep Reading v1.4 structured result: traceable claim-evidence grounding, material coverage matrix, experiment-evidence chains, assumption stress tests, guided reading, and evidence backlinks.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.3"
+      "const": "1.4"
     },
     "analysis_type": {
       "type": "string",
@@ -247,14 +247,16 @@
         "evidence_coverage",
         "locator_mode",
         "context_mode",
-        "boundary_note"
+        "boundary_note",
+        "coverage_matrix"
       ],
       "properties": {
         "evidence_grade": {
           "$ref": "#/$defs/evidence_grade"
         },
         "evidence_coverage": {
-          "$ref": "#/$defs/evidence_coverage"
+          "$ref": "#/$defs/evidence_coverage",
+          "description": "Task-level coverage summary. Use coverage_matrix for component-level detail."
         },
         "locator_mode": {
           "$ref": "#/$defs/locator_mode"
@@ -267,6 +269,9 @@
             "string",
             "null"
           ]
+        },
+        "coverage_matrix": {
+          "$ref": "#/$defs/material_coverage_matrix"
         }
       }
     },
@@ -327,7 +332,9 @@
         "source_block_id",
         "snippet",
         "paraphrase",
-        "verification_status"
+        "verification_status",
+        "evidence_role",
+        "supported_claim_ids"
       ],
       "properties": {
         "id": {
@@ -395,6 +402,17 @@
             "unavailable"
           ],
           "description": "Verification of source excerpt/locator, not scientific replication."
+        },
+        "evidence_role": {
+          "$ref": "#/$defs/evidence_role"
+        },
+        "supported_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^cl-[0-9]{3,}$"
+          },
+          "description": "Backlinks to claims this evidence directly or indirectly supports. Empty is allowed for context-only evidence."
         }
       }
     },
@@ -454,7 +472,9 @@
         "status",
         "evidence_refs",
         "failure_mode",
-        "testability"
+        "testability",
+        "why_needed",
+        "stress_test"
       ],
       "properties": {
         "assumption_id": {
@@ -491,6 +511,14 @@
             "string",
             "null"
           ]
+        },
+        "why_needed": {
+          "type": "string",
+          "description": "Why the method or claim depends on this assumption."
+        },
+        "stress_test": {
+          "type": "string",
+          "description": "Concrete experiment or analysis that could probe whether this assumption holds."
         }
       }
     },
@@ -561,6 +589,28 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "analyzed_version_label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Human-readable version actually analyzed, e.g. uploaded arXiv PDF v2 or publisher PDF."
+        },
+        "publication_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "preprint",
+            "conference",
+            "journal",
+            "book_chapter",
+            "other",
+            "unknown",
+            null
           ]
         }
       }
@@ -773,7 +823,8 @@
         "mechanism",
         "expected_benefit",
         "main_modules",
-        "assumptions"
+        "assumptions",
+        "key_equations"
       ],
       "properties": {
         "summary": {
@@ -802,6 +853,12 @@
           "items": {
             "$ref": "#/$defs/assumption_item"
           }
+        },
+        "key_equations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/equation_explanation"
+          }
         }
       }
     },
@@ -812,7 +869,7 @@
         "claim_id",
         "importance",
         "claim",
-        "evidence_refs",
+        "evidence_links",
         "paper_internal_support",
         "support_reason",
         "scope_boundary",
@@ -836,18 +893,12 @@
         "claim": {
           "$ref": "#/$defs/claim_statement"
         },
-        "evidence_refs": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^ev-[0-9]{3,}$"
-          }
-        },
         "paper_internal_support": {
           "$ref": "#/$defs/support_strength"
         },
         "support_reason": {
-          "type": "string"
+          "type": "string",
+          "description": "Explain why the linked paper-internal evidence supports the claim at this level; distinguish direct experiment support from author interpretation."
         },
         "scope_boundary": {
           "type": [
@@ -863,10 +914,18 @@
         },
         "what_would_strengthen_it": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Concrete analysis-derived validation or stress test. Never use placeholders such as current materials do not specify."
         },
         "external_verification_status": {
           "$ref": "#/$defs/external_verification_status"
+        },
+        "evidence_links": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/evidence_link"
+          }
         }
       }
     },
@@ -1122,7 +1181,7 @@
         "twenty_minute_path": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/twenty_minute_step"
           }
         }
       }
@@ -1235,7 +1294,14 @@
         "paper_internal_evidence_strength",
         "research_value",
         "reading_priority",
-        "who_should_read"
+        "who_should_read",
+        "core_problem",
+        "core_method",
+        "paper_relative_innovation",
+        "strongest_evidence",
+        "biggest_risk",
+        "key_assumptions",
+        "most_important_open_question"
       ],
       "properties": {
         "one_sentence_takeaway": {
@@ -1261,6 +1327,30 @@
           "items": {
             "type": "string"
           }
+        },
+        "core_problem": {
+          "type": "string"
+        },
+        "core_method": {
+          "type": "string"
+        },
+        "paper_relative_innovation": {
+          "type": "string"
+        },
+        "strongest_evidence": {
+          "type": "string"
+        },
+        "biggest_risk": {
+          "type": "string"
+        },
+        "key_assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "most_important_open_question": {
+          "type": "string"
         }
       }
     },
@@ -1274,10 +1364,12 @@
         "evidence_refs",
         "paper_map",
         "research_question",
+        "research_gap",
         "method_summary",
         "contributions",
         "novelty_verification",
         "evaluation_or_findings",
+        "experiments",
         "author_acknowledged_limitations",
         "unresolved_unknowns",
         "claim_evidence",
@@ -1369,6 +1461,355 @@
         },
         "judgment_card": {
           "$ref": "#/$defs/judgment_card"
+        },
+        "research_gap": {
+          "$ref": "#/$defs/research_gap"
+        },
+        "experiments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/experiment_evidence_item"
+          }
+        }
+      }
+    },
+    "material_status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "partial",
+        "missing",
+        "not_checked",
+        "not_applicable"
+      ]
+    },
+    "material_coverage_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "note"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/material_status"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "material_coverage_matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metadata",
+        "abstract",
+        "body_text",
+        "sections",
+        "tables",
+        "figures",
+        "equations",
+        "appendix",
+        "supplement",
+        "code",
+        "external_literature"
+      ],
+      "properties": {
+        "metadata": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "abstract": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "body_text": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "sections": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "tables": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "figures": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "equations": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "appendix": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "supplement": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "code": {
+          "$ref": "#/$defs/material_coverage_item"
+        },
+        "external_literature": {
+          "$ref": "#/$defs/material_coverage_item"
+        }
+      }
+    },
+    "evidence_role": {
+      "type": "string",
+      "enum": [
+        "problem_framing",
+        "method_definition",
+        "main_result",
+        "ablation",
+        "robustness",
+        "qualitative",
+        "author_interpretation",
+        "limitation",
+        "assumption",
+        "protocol",
+        "external_context",
+        "metadata",
+        "other"
+      ]
+    },
+    "support_relation": {
+      "type": "string",
+      "enum": [
+        "direct",
+        "indirect",
+        "context",
+        "contradictory"
+      ]
+    },
+    "evidence_link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "relation"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^ev-[0-9]{3,}$"
+        },
+        "relation": {
+          "$ref": "#/$defs/support_relation"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Short explanation of how this evidence relates to the claim."
+        }
+      }
+    },
+    "gap_assessment_status": {
+      "type": "string",
+      "enum": [
+        "established",
+        "partially_established",
+        "narrative_overreach",
+        "unclear"
+      ]
+    },
+    "gap_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "rationale",
+        "evidence_refs"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/gap_assessment_status"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        }
+      }
+    },
+    "research_gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "author_problem",
+        "author_claimed_gap",
+        "paperscope_bottleneck",
+        "gap_assessment"
+      ],
+      "properties": {
+        "author_problem": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "author_claimed_gap": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "paperscope_bottleneck": {
+          "$ref": "#/$defs/evidence_statement"
+        },
+        "gap_assessment": {
+          "$ref": "#/$defs/gap_assessment"
+        }
+      }
+    },
+    "equation_explanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "equation_id",
+        "label",
+        "purpose",
+        "symbols",
+        "intuition",
+        "verification_status",
+        "evidence_refs"
+      ],
+      "properties": {
+        "equation_id": {
+          "type": "string",
+          "pattern": "^eq-[0-9]{3,}$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "symbols": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "symbol",
+              "meaning"
+            ],
+            "properties": {
+              "symbol": {
+                "type": "string"
+              },
+              "meaning": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "intuition": {
+          "type": "string"
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": [
+            "verified_from_source",
+            "structure_only",
+            "not_available"
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        }
+      }
+    },
+    "experiment_evidence_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiment_id",
+        "purpose",
+        "design",
+        "comparison_conditions",
+        "result",
+        "supported_conclusion",
+        "unsupported_stronger_conclusion",
+        "evidence_refs",
+        "protocol_risks"
+      ],
+      "properties": {
+        "experiment_id": {
+          "type": "string",
+          "pattern": "^ex-[0-9]{3,}$"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "design": {
+          "type": "string"
+        },
+        "comparison_conditions": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        },
+        "supported_conclusion": {
+          "type": "string"
+        },
+        "unsupported_stronger_conclusion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "protocol_risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "twenty_minute_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "target_label",
+        "why_read",
+        "expected_takeaway",
+        "evidence_refs"
+      ],
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "target_label": {
+          "type": "string"
+        },
+        "why_read": {
+          "type": "string"
+        },
+        "expected_takeaway": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         }
       }
     }

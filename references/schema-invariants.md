@@ -1,66 +1,79 @@
-# Schema Invariants — v1.3
+# Schema Invariants — v1.4
 
-These invariants define semantic correctness beyond JSON Schema validation.
+These rules define semantic correctness beyond JSON Schema validation.
 
-## Evidence references
-
-1. Every referenced `ev-*` id must exist exactly once in `paper.evidence_refs`.
-2. Every `reported` statement must reference at least one real evidence id.
-3. A non-null `snippet` must be verbatim source text, not model-generated prose.
-4. `snippet` and `paraphrase` must never be presented as the same provenance.
+## Evidence inventory and backlinks
+1. Every `ev-*` id exists exactly once.
+2. Every referenced evidence id resolves.
+3. Every non-null `snippet` is verbatim inspected source text.
+4. Every `reported` statement has at least one real evidence ref.
+5. `supported_claim_ids` on evidence refs must point to existing claims.
+6. Claim evidence links and evidence backlinks should agree for direct/indirect support.
 
 ## Locator consistency
+7. `structure_grounded` forbids PDF page locators.
+8. `source_limited` forbids page/figure/table/equation locators unless explicitly present in the limited inspected source.
+9. The report cannot emit a locator stronger than its source boundary.
 
-5. `source_boundary.locator_mode = structure_grounded` forbids non-null page numbers in evidence refs.
-6. `source_boundary.locator_mode = source_limited` forbids page/figure/table/equation locators unless the limited inspected source explicitly contains that locator.
-7. The report must not advertise a weaker locator boundary while emitting stronger locators.
-
-## Statement status
-
-8. `reported` means paper-explicit and evidence-grounded.
-9. `inferred` means analysis grounded in inspected material.
-10. `unknown` means genuine non-establishment. It must not be used as a default label for detailed method/result/contribution statements.
-11. An `unknown` evidence statement should normally use `support_strength = missing` and contain no fabricated positive detail.
+## Statement semantics
+10. `reported` = paper-explicit.
+11. `inferred` = PaperScope analysis grounded in inspected material.
+12. `unknown` = genuine non-establishment, not a safety placeholder.
+13. A detailed positive method/result proposition should not be `unknown` when inspected evidence establishes it.
 
 ## Claims
+14. Claim ids are unique.
+15. Each important claim has at least one evidence link.
+16. `paper_internal_support` is determined from paper-internal evidence, not external replication status.
+17. External replication absence alone cannot force paper-internal support to `weak`.
+18. `what_would_strengthen_it` must be a concrete analysis-derived test/check.
+19. Quantitative claim details should be traceable to linked evidence containing the relevant numeric result or a verified table/figure source.
+20. A claim with only context evidence cannot be graded as strongly directly supported.
 
-12. Claim ids are unique.
-13. Claim-level `paper_internal_support` is based on paper-internal evidence only.
-14. External replication status must not automatically lower paper-internal support.
-15. `what_would_strengthen_it` must be a concrete analysis-derived action, not a placeholder.
-16. Quantitative details in a claim must be supported by at least one cited evidence source or explicitly marked as needing verification.
+## Evidence backlinks
+21. Evidence used by a claim should list that claim in `supported_claim_ids` unless the relation is `context` or `contradictory`.
+22. An evidence backlink must not point to a nonexistent claim.
+
+## Research Gap
+23. Research question and research Gap are not the same object.
+24. `paperscope_bottleneck` is normally `inferred`, unless the paper explicitly states the same bottleneck.
+25. Gap assessment must include evidence-backed rationale.
 
 ## Assumptions
+26. Assumption ids are unique.
+27. Risk and provenance are independent dimensions.
+28. High-risk assumptions require `why_needed`, `failure_mode`, and `stress_test`.
+29. High-risk assumptions appear in `critical_review.fragile_assumptions` by id.
+30. A target claim such as “the proposed method is better” should not be recycled as an assumption.
 
-17. Assumption ids are unique.
-18. Every high-risk assumption should have a non-empty failure mode and testability note.
-19. Every high-risk assumption must have a matching `critical_review.fragile_assumptions` entry by `assumption_id`.
-
-## Limitations
-
-20. `author_acknowledged_limitations` contains author-explicit constraints/caveats only and uses `reported` status.
-21. Agent/PaperScope criticism belongs in `critical_review.analysis_limitations`, normally as `inferred`.
-22. Do not duplicate the same limitation into both categories without explaining the different provenance.
+## Experiments
+31. Experiment ids are unique.
+32. Every experiment has evidence refs.
+33. Experiment conclusions are bounded by the tested protocol.
+34. When comparison conditions differ materially, protocol risks must say so.
 
 ## Novelty
+35. `paper_relative_delta` may be assessed from the paper.
+36. `field_novelty` requires external literature verification.
+37. If `context_mode = paper_only`, `field_novelty` must be null/unverified.
 
-23. When `context_mode = paper_only`, `novelty_verification.field_novelty` must be null.
-24. Field-level novelty requires external evidence and a compatible novelty status.
+## Limitations
+38. Author-acknowledged limitations are `reported` and evidence-backed.
+39. PaperScope limitations belong in `critical_review.analysis_limitations` and are normally `inferred`.
+40. Do not duplicate the same point across author limitations and analysis limitations without explaining the provenance difference.
 
-## Open questions and reading guide
+## Open questions and guided reading
+41. Standard E2/E3 deep reading should normally produce at least one grounded open question.
+42. Every open question contains a bounded validation plan.
+43. Standard E2/E3 deep reading should provide reading-guide items and a structured 20-minute path.
+44. Reading-guide locators must come from inspected material.
+45. Every reading-guide item explains why the reader should look there.
 
-25. In `standard` or `followup_mode`, an E2/E3 paper should usually have at least one open question when assumptions, limitations, sensitivity, anomalies, narrow evaluation, or unresolved comparisons exist.
-26. Open-question validation stops at how to test the question; it does not automatically invent a new named method.
-27. A standard deep reading should include a non-empty reading guide when useful source locations are available.
-
-## Overall support and reading priority
-
-28. `judgment_card.paper_internal_evidence_strength` should align with `evidence_audit.paper_internal_support` unless an explicit reason explains the difference.
-29. A core claim with `missing` or `overclaimed` support prevents an overall `strong` paper-internal support rating.
-30. If a core claim is `weak`, overall support is at most `moderate`.
-31. `reading_priority = insufficient_evidence` should not be used merely because external replication is absent. It is for genuinely inadequate material/evidence coverage.
+## Material coverage
+46. Coverage matrix and evidence grade must not contradict each other.
+47. “Partial” coverage should explain what is present and what is missing rather than functioning as a vague label.
 
 ## Contradictions
-
-32. Source disagreements must be recorded rather than silently reconciled.
-33. A contradiction item needs at least two evidence refs.
+48. Source conflicts are preserved, not silently reconciled.
+49. A contradiction references at least two evidence refs.
+50. The affected conclusion is marked uncertain or bounded accordingly.

@@ -1,315 +1,127 @@
-# Evidence Rules
+# Evidence Rules — v1.4
 
-These rules govern factual statements, analytical inferences, criticism, novelty judgments, and follow-up questions in all reading modes.
+These rules govern factual statements, analytical inferences, criticism, novelty judgments, experiment interpretation, and guided reading.
 
-## 1. Evidence grade
+## Evidence grade and coverage
+`E0_TITLE_METADATA`: metadata only.
 
-`E0_TITLE_METADATA` — metadata only.
+`E1_ABSTRACT`: metadata + abstract.
 
-`E1_ABSTRACT` — metadata + abstract.
+`E2_BODY_TEXT`: readable body text.
 
-`E2_BODY_TEXT` — readable body text.
+`E3_BODY_PLUS_ARTIFACTS`: body text plus inspected figures/tables/equations/appendix/supplement.
 
-`E3_BODY_PLUS_ARTIFACTS` — body text + inspected figures/tables/equations/appendix/supplement.
+Evidence grade is not external replication status. Coverage matrix explains which material classes are actually available.
 
-`deep_reading` requires E2 or E3. E0/E1 use `limited_reading`.
-
-Evidence grade describes what was inspected. It does not indicate external replication or how completely the current reading task is covered.
-
-## 2. Source boundary
-
-Track separately:
-
-- evidence grade;
-- evidence coverage;
-- locator mode;
-- context mode;
-- boundary note.
+## Source boundary
+Track evidence grade, task-level evidence coverage, locator mode, context mode, coverage matrix, and a human-readable boundary note.
 
 ### Locator rules
+- `page_grounded`: reliable PDF pages.
+- `structure_grounded`: reliable structure, unreliable/absent PDF pages.
+- `source_limited`: limited sources only.
 
-`page_grounded` — reliable PDF page indices are available.
+Hard rule: `structure_grounded` means page must be null.
 
-`structure_grounded` — section/figure/table/equation structure is reliable, but PDF page indices are not.
+## Statement status
+### reported
+Explicitly stated by the inspected paper/material. Requires evidence.
 
-`source_limited` — metadata, abstract, or partial excerpts only.
+### inferred
+PaperScope interpretation grounded in inspected evidence.
 
-Hard rules:
+### unknown
+The materials genuinely do not establish the point. Unknown is not a default safety label.
 
-- `structure_grounded` => no non-null page locators anywhere in evidence refs.
-- `source_limited` => no invented page/figure/table/equation locators.
-- Do not emit a locator stronger than the established source boundary.
+## Evidence refs
+Every evidence ref separates source text from interpretation:
+- `snippet`: short verbatim source text only;
+- `paraphrase`: model summary;
+- `verification_status`: whether the excerpt/locator itself is source-verified;
+- `evidence_role`: why this evidence matters;
+- `supported_claim_ids`: backlinks into the claim map.
 
-## 3. Statement status
+Never generate plausible source text.
 
-### `reported`
-The inspected source explicitly states the point.
+## Claim evidence links
+Each claim links evidence with a relation:
+- `direct`: directly measures/defines the claim;
+- `indirect`: supports the claim through a reasonable step;
+- `context`: background/context only;
+- `contradictory`: conflicts with the claim or part of it.
 
-Requirements:
+A strong claim should normally have at least one direct evidence link.
 
-- at least one real evidence ref;
-- wording does not exceed source scope.
-
-### `inferred`
-PaperScope/agent analysis grounded in inspected material.
-
-Use for:
-
-- actual bottleneck assessment;
-- method interpretation not explicitly stated;
-- alternative explanation;
-- critical limitation;
-- inferred assumption;
-- general lesson.
-
-### `unknown`
-The material genuinely does not establish the point.
-
-Do not use `unknown` as a safety default.
-
-A detailed positive proposition such as “the module uses k-NN cosine matching” cannot be both specific and `unknown` if the inspected paper supports it.
-
-For genuine unknowns, write the non-establishment itself, e.g.:
-
-> Current materials do not establish whether the gain persists under domain shift.
-
-## 4. Evidence refs
-
-Each evidence ref separates source from interpretation.
-
-- `snippet`: short verbatim source excerpt only.
-- `paraphrase`: model summary/interpretation.
-- `verification_status`: verification of source excerpt/locator, not external scientific replication.
-
-Never synthesize a plausible source quote.
-
-If a source location is known but no excerpt was retained:
-
-- `snippet = null`;
-- keep an accurate paraphrase;
-- mark source verification appropriately.
-
-## 5. Paper-internal support vs external verification
-
+## Paper-internal support vs external verification
 These are independent.
 
-`paper_internal_support` asks:
+Paper-internal support answers whether the paper itself supports the bounded claim.
 
-> Does the inspected paper itself provide evidence for this bounded claim?
+External verification answers whether independent literature/reproduction has checked it.
 
-`external_verification_status` asks:
+Do not downgrade a well-supported paper-internal experiment solely because external replication is absent.
 
-> Has the claim been checked outside this paper or reproduced independently?
+## Support scale
+- `strong`: direct, well-matched evidence for a bounded claim.
+- `moderate`: useful direct/converging evidence with meaningful limitations.
+- `weak`: narrow, indirect, incomplete, or confounded.
+- `missing`: no evidence.
+- `overclaimed`: wording exceeds evidence.
+- `not_applicable`: grading not applicable.
 
-Lack of external replication must not automatically reduce paper-internal support.
+## Numeric traceability
+For important numeric claims, direct linked evidence should contain the same numbers or point to an inspected table/figure containing them.
 
-Example:
+If the linked source only provides qualitative context, relation must be `indirect` or `context`, not direct numeric support.
 
-- a direct ablation table can strongly support a bounded within-paper comparison;
-- external verification may still be `not_checked`.
+## Experiments
+Interpret experiments through:
+`purpose → design → conditions → result → supported conclusion → unsupported stronger conclusion → protocol risks`.
 
-Do not repeatedly weaken a claim merely because code was not rerun.
+Do not treat author interpretation as equivalent to measured evidence.
 
-## 6. Support scale
+## Assumptions
+Provenance (`explicit`/`inferred`) and risk (`low`/`medium`/`high`) are independent.
 
-`strong` — direct, well-matched evidence supports the bounded claim.
-
-`moderate` — useful direct or converging evidence exists, with meaningful limitations.
-
-`weak` — evidence is indirect, narrow, incomplete, or confounded.
-
-`missing` — the paper/material does not provide evidence for the claim.
-
-`overclaimed` — the claim materially exceeds available evidence.
-
-`not_applicable` — support grading does not apply.
-
-## 7. Downgrade rules
-
-Downgrade when:
-
-- a narrow experiment is generalized broadly;
-- robustness is claimed without stress tests;
-- a causal claim lacks causal design;
-- novelty is claimed without relevant comparison;
-- a key assumption is untested and decisive;
-- baseline details prevent fair comparison;
-- evaluation covers only a narrow population/domain while conclusion is general;
-- a quantitative claim is not supported by the cited evidence.
-
-## 8. Protect rules
-
-Do not over-downgrade.
-
-A bounded claim may be `strong` or `moderate` when:
-
-- direct comparison/ablation exists;
-- standard metrics are used;
-- setup is sufficiently described;
-- no identified flaw invalidates the comparison.
-
-External replication is valuable, but its absence alone is not a reason to reduce a well-supported paper-internal claim.
-
-An `inferred` statement may also receive `moderate` support when the inference follows directly from clearly inspected evidence.
-
-## 9. Assumptions
-
-Assumption provenance and risk are independent.
-
-`provenance`:
-
-- `explicit` — author-stated assumption/precondition;
-- `inferred` — implied by design or evaluation.
-
-`risk_level`:
-
-- `low`;
-- `medium`;
-- `high`.
-
-High-risk assumptions require:
-
-- a stable `assumption_id`;
+For high-risk assumptions include:
+- why the method needs it;
 - failure mode;
-- stress-test idea;
-- mirrored reference in `critical_review.fragile_assumptions`.
+- stress test.
 
-## 10. Claim–Evidence checks
+A claim being tested is not automatically an assumption.
 
-Each important claim must include:
+## Author limitations vs analysis limitations
+Author limitations/constraints are reported and source-grounded.
+PaperScope limitations are analytical and normally inferred.
+Keep them separate.
 
-1. stable claim id;
-2. importance;
-3. claim text and provenance status;
-4. evidence refs;
-5. paper-internal support;
-6. support reason;
-7. scope boundary;
-8. unsupported stronger claim when useful;
-9. concrete strengthening action;
-10. external verification status.
+## Novelty
+Paper-relative delta may be analyzed from the paper.
+Field novelty requires external literature verification.
 
-### Strengthening action
+If context mode is paper-only, do not claim first/unprecedented/field-novel/SOTA-across-field status.
 
-`what_would_strengthen_it` is PaperScope analysis.
+## Open questions
+Open questions may be derived from assumptions, parameter sensitivity, anomalies, narrow evaluation, missing robustness, or author caveats.
 
-Do not answer:
+Every open question includes why it matters and how to validate it.
 
-- “current materials do not specify”;
-- “unknown”;
-- “not mentioned”.
+Do not automatically invent a named new architecture.
 
-Instead propose a bounded check, such as:
+## Guided reading
+Recommend only source locations actually available. Each recommendation explains why it matters and what to learn there.
 
-- matched-backbone baseline;
-- missing ablation;
-- statistical test;
-- additional dataset/population;
-- cross-domain test;
-- sensitivity analysis;
-- code reproduction;
-- independent replication.
-
-## 11. Author limitations vs analysis limitations
-
-### Author-acknowledged limitations
-
-Only include points explicitly acknowledged by authors.
-
-Requirements:
-
-- status `reported`;
-- evidence refs required.
-
-If authors describe a constraint without calling it a “limitation”, it may still be included when clearly framed as a constraint/caveat; do not misrepresent it as a formal limitation if the distinction matters.
-
-### Analysis limitations
-
-Agent/PaperScope criticism belongs in `critical_review.analysis_limitations` and is normally `inferred`.
-
-Never mix the two categories.
-
-## 12. Novelty
-
-`paper_relative_delta` is what changes relative to prior work discussed by the paper.
-
-`field_novelty` requires targeted external verification.
-
-If `context_mode = paper_only`:
-
-- `field_novelty = null`;
-- do not claim first/unprecedented/field-novel/broad-SOTA status.
-
-## 13. Open questions
-
-Open questions do not require an explicit Future Work section.
-
-They may be derived from:
-
-- assumptions;
-- failure modes;
-- parameter sensitivity;
-- anomalous results;
-- narrow evaluation;
-- unresolved comparisons;
-- missing robustness tests;
-- author caveats.
-
-Each question includes:
-
-- origin: `author_stated` or `analysis_derived`;
-- why it matters;
-- bounded suggested validation;
-- evidence refs.
-
-Do not automatically design a new named architecture or module.
-
-## 14. Reading guide
-
-A standard deep reading should identify high-value original locations to inspect.
-
-Prioritize:
-
-- method-defining section/equation;
-- key comparison table;
-- key ablation/sensitivity table;
-- discussion/limitations;
-- any figure essential to mechanism.
-
-Only recommend locators actually present in inspected material.
-
-## 15. Contradictions and mismatches
-
-When source materials disagree:
-
-1. retain both values/statements;
-2. attach both evidence refs;
-3. describe impact;
-4. state what would resolve the discrepancy.
-
-Do not silently reconcile.
-
-For quantitative claim–evidence mismatches:
-
-- split the claim;
-- correct the evidence mapping;
-- or downgrade support.
-
-## 16. Final evidence audit
-
-Before output check:
-
-- every `reported` statement resolves to evidence;
-- every evidence id exists;
-- `unknown` is genuine non-establishment;
-- snippets are source-derived;
-- source-boundary and locator precision are consistent;
-- field novelty is externally grounded;
-- high-risk assumptions are linked correctly;
-- author limitations and analysis limitations are separated;
-- quantitative claims match cited evidence;
-- `what_would_strengthen_it` is concrete;
-- external verification did not improperly lower paper-internal support;
-- open questions are populated when defensible;
-- reading guide is populated for standard deep readings;
+## Final audit
+Check:
+- all refs resolve;
+- every reported statement is evidenced;
+- no fabricated snippets;
+- locator rules hold;
+- numeric claims map to proper evidence;
+- evidence backlinks and claim links agree;
+- high-risk assumptions have failure/stress-test logic;
+- experiments do not overgeneralize;
+- author vs analysis limitations are separated;
+- open questions and reading guide are present in standard E2/E3 reading;
+- field novelty obeys external-verification boundary;
 - contradictions are surfaced.

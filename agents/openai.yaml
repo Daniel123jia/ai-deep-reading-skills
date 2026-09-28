@@ -1,65 +1,56 @@
 name: paperscope-ai-deep-reading
-version: 1.3.0
+version: 1.4.0
 description: >
-  Evidence-grounded academic paper deep reading for PaperScope / Scholar AI.
-  Produces structured claim-level analysis with strict provenance semantics,
-  source-boundary tracking, assumption auditing, author-vs-analysis limitation
-  separation, reading guidance, open questions, and semantic validation.
+  Deep-read academic papers with traceable claim-evidence grounding,
+  experiment-evidence chains, assumption stress tests, and guided return-to-source reading.
 
 skill_file: ../SKILL.md
 schema_file: ../schemas/deep-reading-result.schema.json
 evidence_rules_file: ../references/evidence-rules.md
-invariants_file: ../references/schema-invariants.md
-rendering_guidance_file: ../references/rendering-guidance.md
-validator_file: ../scripts/validate_result.py
 
 trigger_phrases:
   - AI paper deep reading
   - paper understanding
+  - claim evidence
   - method analysis
-  - claim-evidence review
   - assumption audit
   - research follow-up
   - 论文精读
   - 方法分析
   - 证据审查
-  - 研究跟进
+  - 批判性阅读
+  - 精读建议
 
 reading_modes:
-  - id: quick_summary
-    description: Fast triage with grounding core preserved.
   - id: standard
-    description: Full evidence-grounded deep reading. Default mode.
+    description: Full six-stage deep reading with traceability and guided reading.
+  - id: quick_summary
+    description: Fast triage; grounding core still runs.
   - id: reviewer_mode
-    description: Emphasizes critical review, claim-evidence, and evidence audit.
+    description: Emphasize evidence quality, limitations, assumptions, and reviewer questions.
   - id: followup_mode
-    description: Emphasizes open questions and bounded validation directions.
+    description: Emphasize open questions, fragile assumptions, and validation paths.
   - id: method_only
-    description: Emphasizes method, assumptions, mechanism, and claims.
+    description: Emphasize Method Diff, modules, equations, assumptions, and ablations.
 
 output:
-  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.3
+  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.4
   secondary: optional concise conversational summary
 
 constraints:
+  schema_version: "1.4"
   max_papers_per_call: 5
   min_evidence_grade_for_deep_reading: E2_BODY_TEXT
-  schema_version: "1.3"
   require_source_boundary: true
   require_claim_level_evidence: true
+  require_guided_reading_for_standard: true
   forbid_generated_snippets: true
   separate_internal_support_from_external_verification: true
-  separate_author_limitations_from_analysis_limitations: true
 
 model_notes: >
-  Do not use unknown as a safe default. If inspected material supports a specific
-  method/result/contribution statement, classify it as reported or inferred.
-  Establish source boundary before analysis and keep locator precision consistent.
-  Never fabricate evidence refs, locations, numbers, snippets, figures, tables,
-  equations, datasets, baselines, or citations. Paper-internal support and external
-  verification are independent. Lack of third-party replication does not by itself
-  downgrade a direct within-paper result. High-risk assumptions must link by stable
-  assumption_id to fragile-assumption analysis. Author-acknowledged limitations and
-  agent-derived limitations must be separate. Standard E2/E3 readings should derive
-  useful open questions and a reading guide when defensible. Run the validator when
-  available before final delivery.
+  Build evidence inventory before interpretation. Use reported only for paper-explicit
+  statements, inferred for PaperScope analysis, and unknown only for genuine non-establishment.
+  Maintain Claim→Evidence links and Evidence→Claim backlinks. Quantitative claims should
+  be traceable to direct numeric evidence. Standard E2/E3 reading should include open
+  questions and a source-grounded reading path. Never invent locators, snippets, formulas,
+  figures, tables, field novelty, or universal conclusions.

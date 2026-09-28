@@ -1,0 +1,16 @@
+.gitignore
+CHANGELOG.md
+README.md
+SKILL.md
+VERSION
+agents/openai.yaml
+examples/minimal-v1.4.json
+references/evidence-rules.md
+references/experiment-evidence-rules.md
+references/guided-reading-rules.md
+references/paper-type-lenses.md
+references/rendering-guidance.md
+references/schema-invariants.md
+schemas/deep-reading-result.schema.json
+scripts/validate_result.py
+tests/test_smoke.py

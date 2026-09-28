@@ -1,40 +1,42 @@
 #!/usr/bin/env python3
-"""Validate PaperScope AI Deep Reading v1.3 results.
-
-Performs JSON Schema validation plus semantic invariant checks that are difficult to
-express in JSON Schema alone. Exits 0 on success, 1 on errors. Warnings do not fail.
-"""
-
 from __future__ import annotations
 
 import argparse
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from jsonschema import Draft202012Validator
+    import jsonschema
 except Exception:  # pragma: no cover
-    Draft202012Validator = None
+    jsonschema = None
 
-NUM_RE = re.compile(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?(?:%|s|ms)?")
-PLACEHOLDER_PATTERNS = (
+NUM_RE = re.compile(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?%?(?:±\d+(?:\.\d+)?)?")
+PLACEHOLDERS = (
     "当前材料未说明",
-    "当前材料无法说明",
     "current materials do not specify",
-    "not specified",
+    "not mentioned",
     "unknown",
+    "tbd",
 )
 
 
 def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def walk_evidence_statements(obj: Any, path: str = "$") -> Iterable[tuple[str, dict[str, Any]]]:
+def walk(obj: Any, path: str = "$"):
+    yield path, obj
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from walk(v, f"{path}.{k}")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from walk(v, f"{path}[{i}]")
+
+
+def walk_evidence_statements(obj: Any, path: str = "$"):
     if isinstance(obj, dict):
         if {"text", "status", "evidence_refs", "support_strength"}.issubset(obj.keys()):
             yield path, obj
@@ -45,37 +47,35 @@ def walk_evidence_statements(obj: Any, path: str = "$") -> Iterable[tuple[str, d
             yield from walk_evidence_statements(v, f"{path}[{i}]")
 
 
-def numeric_tokens(text: str) -> set[str]:
-    return {m.group(0).lower() for m in NUM_RE.finditer(text or "")}
+def nums(text: str) -> set[str]:
+    return {m.group(0).replace(" ", "") for m in NUM_RE.finditer(text or "")}
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("result", type=Path, help="deep-reading-result.json")
-    ap.add_argument(
-        "--schema",
-        type=Path,
-        default=Path(__file__).resolve().parents[1] / "schemas" / "deep-reading-result.schema.json",
-    )
-    ap.add_argument("--strict-warnings", action="store_true", help="Treat warnings as errors")
+    ap = argparse.ArgumentParser(description="Validate PaperScope AI Deep Reading v1.4 output")
+    ap.add_argument("result")
+    ap.add_argument("--schema", default=None)
+    ap.add_argument("--strict-warnings", action="store_true")
     args = ap.parse_args()
 
-    data = load_json(args.result)
-    schema = load_json(args.schema)
+    result_path = Path(args.result)
+    schema_path = Path(args.schema) if args.schema else Path(__file__).resolve().parents[1] / "schemas" / "deep-reading-result.schema.json"
+    data = load_json(result_path)
+    schema = load_json(schema_path)
 
     errors: list[str] = []
     warnings: list[str] = []
 
-    if Draft202012Validator is None:
-        warnings.append("jsonschema is unavailable; JSON Schema validation was skipped")
-    else:
-        validator = Draft202012Validator(schema)
-        for e in sorted(validator.iter_errors(data), key=lambda x: list(x.absolute_path)):
+    if jsonschema is not None:
+        validator = jsonschema.Draft202012Validator(schema)
+        for e in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path)):
             loc = "$" + "".join(f"[{p}]" if isinstance(p, int) else f".{p}" for p in e.absolute_path)
             errors.append(f"schema {loc}: {e.message}")
+    else:
+        warnings.append("jsonschema package unavailable; schema validation skipped")
 
-    if data.get("schema_version") != "1.3":
-        errors.append("schema_version must be 1.3")
+    if data.get("schema_version") != "1.4":
+        errors.append("schema_version must be 1.4")
 
     reading_mode = ((data.get("input") or {}).get("reading_mode"))
 
@@ -84,34 +84,36 @@ def main() -> int:
         boundary = paper.get("source_boundary") or {}
         locator_mode = boundary.get("locator_mode")
         grade = boundary.get("evidence_grade")
-        coverage = ((boundary.get("evidence_coverage") or {}).get("level"))
+        coverage_level = ((boundary.get("evidence_coverage") or {}).get("level"))
         context_mode = boundary.get("context_mode")
 
+        # Evidence inventory
         evs = paper.get("evidence_refs") or []
         ev_map: dict[str, dict[str, Any]] = {}
         for i, ev in enumerate(evs):
+            ep = f"{base}.evidence_refs[{i}]"
             eid = ev.get("id")
+            if not eid:
+                continue
             if eid in ev_map:
-                errors.append(f"{base}.evidence_refs[{i}]: duplicate evidence id {eid}")
-            if eid:
-                ev_map[eid] = ev
-
+                errors.append(f"{ep}: duplicate evidence id {eid}")
+            ev_map[eid] = ev
             loc = ev.get("location") or {}
             if locator_mode == "structure_grounded" and loc.get("page") is not None:
-                errors.append(f"{base}: structure_grounded forbids page locator on {eid}")
+                errors.append(f"{ep}: structure_grounded forbids page locator")
             if locator_mode == "source_limited":
                 for k in ("page", "figure", "table", "equation"):
                     if loc.get(k) is not None:
-                        errors.append(f"{base}: source_limited forbids {k} locator on {eid}")
+                        errors.append(f"{ep}: source_limited forbids {k} locator")
             if ev.get("snippet") is not None and ev.get("verification_status") == "unavailable":
-                warnings.append(f"{base}: {eid} has snippet but verification_status=unavailable")
+                warnings.append(f"{ep}: snippet exists while verification_status=unavailable")
 
-        def require_refs(refs: Iterable[str], where: str) -> None:
+        def require_refs(refs: Iterable[str], where: str):
             for ref in refs or []:
                 if ref not in ev_map:
                     errors.append(f"{where}: unresolved evidence ref {ref}")
 
-        # Evidence statements: status semantics and ref resolution
+        # All evidence statements
         for spath, st in walk_evidence_statements(paper, base):
             refs = st.get("evidence_refs") or []
             require_refs(refs, spath)
@@ -121,112 +123,179 @@ def main() -> int:
             if status == "reported" and not refs:
                 errors.append(f"{spath}: reported statement requires evidence_refs")
             if status == "unknown" and strength not in ("missing", "not_applicable"):
-                warnings.append(f"{spath}: unknown statement should normally use missing/not_applicable support")
-            if status == "unknown" and refs:
-                warnings.append(f"{spath}: unknown statement has evidence refs; verify it is true non-establishment, not a misclassified supported statement")
-            if status == "unknown" and len(text) > 160:
-                warnings.append(f"{spath}: long detailed statement labeled unknown; likely status misuse")
+                warnings.append(f"{spath}: unknown should normally use missing/not_applicable support")
+            if status == "unknown" and len(text) > 140:
+                warnings.append(f"{spath}: detailed positive proposition labeled unknown; likely status misuse")
 
-        # Assumptions
+        # Claims
+        claims = paper.get("claim_evidence") or []
+        claim_map: dict[str, dict[str, Any]] = {}
+        core_strengths = []
+        for i, c in enumerate(claims):
+            cp = f"{base}.claim_evidence[{i}]"
+            cid = c.get("claim_id")
+            if cid in claim_map:
+                errors.append(f"{cp}: duplicate claim id {cid}")
+            if cid:
+                claim_map[cid] = c
+            links = c.get("evidence_links") or []
+            if not links:
+                errors.append(f"{cp}: claim requires evidence_links")
+            linked_ids = []
+            direct_ids = []
+            for j, link in enumerate(links):
+                eid = link.get("evidence_id")
+                linked_ids.append(eid)
+                if eid not in ev_map:
+                    errors.append(f"{cp}.evidence_links[{j}]: unresolved evidence ref {eid}")
+                if link.get("relation") == "direct":
+                    direct_ids.append(eid)
+            if c.get("claim", {}).get("status") == "reported" and not linked_ids:
+                errors.append(f"{cp}: reported claim requires evidence")
+            strengthen = (c.get("what_would_strengthen_it") or "").strip().lower()
+            if not strengthen:
+                errors.append(f"{cp}: what_would_strengthen_it is empty")
+            elif any(p.lower() in strengthen for p in PLACEHOLDERS):
+                warnings.append(f"{cp}: what_would_strengthen_it looks like a placeholder")
+            if c.get("paper_internal_support") == "strong" and not direct_ids:
+                warnings.append(f"{cp}: strong claim has no direct evidence link")
+            if c.get("importance") == "core":
+                core_strengths.append(c.get("paper_internal_support"))
+
+            # Numeric grounding heuristic: for quantitative claims, prefer direct evidence containing the numbers.
+            claim_nums = nums((c.get("claim") or {}).get("text") or "")
+            if claim_nums and direct_ids:
+                source = " ".join(
+                    ((ev_map.get(eid) or {}).get("snippet") or "") + " " + ((ev_map.get(eid) or {}).get("paraphrase") or "")
+                    for eid in direct_ids
+                )
+                missing = claim_nums - nums(source)
+                # one missing structural number (e.g. 5-way) can be harmless; 2+ is suspicious
+                if len(missing) >= 2:
+                    warnings.append(f"{cp}: quantitative tokens not found in direct evidence: {sorted(missing)}")
+
+        # Backlinks evidence -> claims
+        for eid, ev in ev_map.items():
+            for cid in ev.get("supported_claim_ids") or []:
+                if cid not in claim_map:
+                    errors.append(f"{base}: evidence {eid} backlinks to nonexistent claim {cid}")
+            # Every non-context/non-contradictory use should usually be backlinkable
+        for cid, c in claim_map.items():
+            for link in c.get("evidence_links") or []:
+                eid = link.get("evidence_id")
+                rel = link.get("relation")
+                if eid in ev_map and rel in ("direct", "indirect"):
+                    if cid not in (ev_map[eid].get("supported_claim_ids") or []):
+                        warnings.append(f"{base}: evidence {eid} used by {cid} but supported_claim_ids lacks backlink")
+
+        # Source coverage coherence
+        matrix = boundary.get("coverage_matrix") or {}
+        if grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS"):
+            body_status = ((matrix.get("body_text") or {}).get("status"))
+            if body_status in ("missing", "not_checked"):
+                errors.append(f"{base}: {grade} conflicts with coverage_matrix.body_text={body_status}")
+        if grade == "E3_BODY_PLUS_ARTIFACTS":
+            artifact_statuses = [((matrix.get(k) or {}).get("status")) for k in ("tables","figures","equations","appendix","supplement")]
+            if not any(x in ("available", "partial") for x in artifact_statuses):
+                warnings.append(f"{base}: E3 declared but coverage matrix shows no inspected artifacts")
+
+        # Research gap
+        gap = paper.get("research_gap") or {}
+        for key in ("author_problem", "author_claimed_gap", "paperscope_bottleneck"):
+            st = gap.get(key) or {}
+            require_refs(st.get("evidence_refs") or [], f"{base}.research_gap.{key}")
+        ga = gap.get("gap_assessment") or {}
+        require_refs(ga.get("evidence_refs") or [], f"{base}.research_gap.gap_assessment")
+
+        # Assumptions and fragile assumptions
         assumptions = ((paper.get("method_summary") or {}).get("assumptions") or [])
         assumption_map: dict[str, dict[str, Any]] = {}
         for i, a in enumerate(assumptions):
+            apath = f"{base}.method_summary.assumptions[{i}]"
             aid = a.get("assumption_id")
             if aid in assumption_map:
-                errors.append(f"{base}.method_summary.assumptions[{i}]: duplicate assumption id {aid}")
+                errors.append(f"{apath}: duplicate assumption id {aid}")
             if aid:
                 assumption_map[aid] = a
-            require_refs(a.get("evidence_refs") or [], f"{base}.method_summary.assumptions[{i}]")
+            require_refs(a.get("evidence_refs") or [], apath)
             if a.get("risk_level") == "high":
-                if not (a.get("failure_mode") or "").strip():
-                    errors.append(f"{base}: high-risk assumption {aid} requires failure_mode")
-                if not (a.get("testability") or "").strip():
-                    warnings.append(f"{base}: high-risk assumption {aid} should include testability")
+                for field in ("why_needed", "failure_mode", "stress_test"):
+                    if not (a.get(field) or "").strip():
+                        errors.append(f"{apath}: high-risk assumption requires {field}")
 
         fragile = ((paper.get("critical_review") or {}).get("fragile_assumptions") or [])
         fragile_ids = set()
         for i, fa in enumerate(fragile):
+            fp = f"{base}.critical_review.fragile_assumptions[{i}]"
             aid = fa.get("assumption_id")
             fragile_ids.add(aid)
             if aid not in assumption_map:
-                errors.append(f"{base}.critical_review.fragile_assumptions[{i}]: unknown assumption id {aid}")
-            require_refs(fa.get("evidence_refs") or [], f"{base}.critical_review.fragile_assumptions[{i}]")
+                errors.append(f"{fp}: unknown assumption id {aid}")
+            require_refs(fa.get("evidence_refs") or [], fp)
         for aid, a in assumption_map.items():
             if a.get("risk_level") == "high" and aid not in fragile_ids:
                 errors.append(f"{base}: high-risk assumption {aid} missing from fragile_assumptions")
 
+        # Experiments
+        ex_ids = set()
+        for i, ex in enumerate(paper.get("experiments") or []):
+            xp = f"{base}.experiments[{i}]"
+            xid = ex.get("experiment_id")
+            if xid in ex_ids:
+                errors.append(f"{xp}: duplicate experiment id {xid}")
+            ex_ids.add(xid)
+            require_refs(ex.get("evidence_refs") or [], xp)
+            result_nums = nums(ex.get("result") or "")
+            if result_nums:
+                source = " ".join(
+                    ((ev_map.get(eid) or {}).get("snippet") or "") + " " + ((ev_map.get(eid) or {}).get("paraphrase") or "")
+                    for eid in ex.get("evidence_refs") or []
+                )
+                if len(result_nums - nums(source)) >= 2:
+                    warnings.append(f"{xp}: experiment numeric result not well grounded in linked evidence")
+
         # Author limitations must be reported
         for i, lim in enumerate(paper.get("author_acknowledged_limitations") or []):
+            lp = f"{base}.author_acknowledged_limitations[{i}]"
             if lim.get("status") != "reported":
-                errors.append(f"{base}.author_acknowledged_limitations[{i}]: must be status=reported")
-            require_refs(lim.get("evidence_refs") or [], f"{base}.author_acknowledged_limitations[{i}]")
+                errors.append(f"{lp}: author limitation must be status=reported")
+            require_refs(lim.get("evidence_refs") or [], lp)
 
-        # Claims
-        claim_ids = set()
-        core_strengths = []
-        for i, c in enumerate(paper.get("claim_evidence") or []):
-            cpath = f"{base}.claim_evidence[{i}]"
-            cid = c.get("claim_id")
-            if cid in claim_ids:
-                errors.append(f"{cpath}: duplicate claim id {cid}")
-            claim_ids.add(cid)
-            refs = c.get("evidence_refs") or []
-            require_refs(refs, cpath)
-            claim = c.get("claim") or {}
-            if claim.get("status") == "reported" and not refs:
-                errors.append(f"{cpath}: reported claim requires evidence refs")
-            strengthen = (c.get("what_would_strengthen_it") or "").strip().lower()
-            if any(pat in strengthen for pat in PLACEHOLDER_PATTERNS):
-                warnings.append(f"{cpath}: what_would_strengthen_it looks like a placeholder")
-            if c.get("importance") == "core":
-                core_strengths.append(c.get("paper_internal_support"))
-
-            # Heuristic numeric grounding check
-            claim_nums = numeric_tokens(claim.get("text") or "")
-            if claim_nums and refs:
-                source_text = " ".join(
-                    ((ev_map.get(r) or {}).get("snippet") or "") + " " + ((ev_map.get(r) or {}).get("paraphrase") or "")
-                    for r in refs
-                )
-                source_nums = numeric_tokens(source_text)
-                missing_nums = claim_nums - source_nums
-                # ignore common structural integers (shot/way/k values may be paraphrased elsewhere)
-                if len(missing_nums) >= 2:
-                    warnings.append(f"{cpath}: quantitative tokens not found in cited evidence: {sorted(missing_nums)}")
-
-        audit = paper.get("evidence_audit") or {}
-        overall = audit.get("paper_internal_support")
-        if any(s in ("missing", "overclaimed") for s in core_strengths) and overall == "strong":
-            errors.append(f"{base}: overall paper_internal_support cannot be strong with missing/overclaimed core claim")
-        if any(s == "weak" for s in core_strengths) and overall == "strong":
-            errors.append(f"{base}: overall paper_internal_support cannot be strong with weak core claim")
-
-        judgment = paper.get("judgment_card") or {}
-        jstrength = judgment.get("paper_internal_evidence_strength")
-        if overall and jstrength and overall != jstrength:
-            warnings.append(f"{base}: judgment strength ({jstrength}) differs from audit support ({overall})")
-
-        rp = (judgment.get("reading_priority") or {}).get("level")
-        if rp == "insufficient_evidence" and grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS") and coverage == "sufficient" and overall in ("strong", "moderate"):
-            warnings.append(f"{base}: insufficient_evidence reading priority conflicts with sufficient E2/E3 material and {overall} internal support")
-
-        # Novelty
+        # Novelty boundary
         novelty = paper.get("novelty_verification") or {}
         if context_mode == "paper_only" and novelty.get("field_novelty") is not None:
             errors.append(f"{base}: field_novelty must be null when context_mode=paper_only")
 
-        # Open questions / reading guide completeness
-        open_questions = paper.get("open_questions") or []
-        if reading_mode in ("standard", "followup_mode") and grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS") and not open_questions:
-            warnings.append(f"{base}: standard/followup E2/E3 reading has no open questions")
-        for i, q in enumerate(open_questions):
-            require_refs(q.get("evidence_refs") or [], f"{base}.open_questions[{i}]")
+        # Evidence audit consistency
+        audit = paper.get("evidence_audit") or {}
+        overall = audit.get("paper_internal_support")
+        if any(s in ("missing", "overclaimed") for s in core_strengths) and overall == "strong":
+            errors.append(f"{base}: overall support cannot be strong with missing/overclaimed core claim")
+        if any(s == "weak" for s in core_strengths) and overall == "strong":
+            errors.append(f"{base}: overall support cannot be strong with weak core claim")
 
+        # Open questions
+        oq = paper.get("open_questions") or []
+        if reading_mode in ("standard", "followup_mode") and grade in ("E2_BODY_TEXT","E3_BODY_PLUS_ARTIFACTS") and not oq:
+            warnings.append(f"{base}: E2/E3 standard/followup report has no open questions")
+        for i, q in enumerate(oq):
+            require_refs(q.get("evidence_refs") or [], f"{base}.open_questions[{i}]")
+            if not (q.get("suggested_validation") or "").strip():
+                errors.append(f"{base}.open_questions[{i}]: suggested_validation required")
+
+        # Reading guide
         guide = paper.get("reading_guide") or {}
-        if reading_mode == "standard" and grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS") and not (guide.get("items") or []):
-            warnings.append(f"{base}: standard E2/E3 reading has empty reading guide")
-        for i, item in enumerate(guide.get("items") or []):
+        items = guide.get("items") or []
+        path = guide.get("twenty_minute_path") or []
+        if reading_mode == "standard" and grade in ("E2_BODY_TEXT","E3_BODY_PLUS_ARTIFACTS"):
+            if not items:
+                warnings.append(f"{base}: standard E2/E3 report has empty reading guide")
+            if not path:
+                warnings.append(f"{base}: standard E2/E3 report has empty 20-minute path")
+        for i, item in enumerate(items):
             require_refs(item.get("evidence_refs") or [], f"{base}.reading_guide.items[{i}]")
+        for i, step in enumerate(path):
+            require_refs(step.get("evidence_refs") or [], f"{base}.reading_guide.twenty_minute_path[{i}]")
 
         # Contradictions
         cx_ids = set()
@@ -239,7 +308,13 @@ def main() -> int:
             refs = cx.get("evidence_refs") or []
             require_refs(refs, cpath)
             if len(refs) < 2:
-                errors.append(f"{cpath}: contradiction needs at least two evidence refs")
+                errors.append(f"{cpath}: contradiction requires at least two evidence refs")
+
+        # Reading priority sanity
+        judgment = paper.get("judgment_card") or {}
+        rp = ((judgment.get("reading_priority") or {}).get("level"))
+        if rp == "insufficient_evidence" and grade in ("E2_BODY_TEXT","E3_BODY_PLUS_ARTIFACTS") and coverage_level == "sufficient" and overall in ("strong","moderate"):
+            warnings.append(f"{base}: insufficient_evidence reading priority conflicts with sufficient materials and {overall} support")
 
     for w in warnings:
         print(f"WARNING: {w}")
@@ -249,7 +324,6 @@ def main() -> int:
     if errors or (args.strict_warnings and warnings):
         print(f"FAILED: {len(errors)} error(s), {len(warnings)} warning(s)")
         return 1
-
     print(f"OK: 0 errors, {len(warnings)} warning(s)")
     return 0
 
