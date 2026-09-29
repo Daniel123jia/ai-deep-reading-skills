@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.0 — Traceable Critical Reading
+
+- Added `claim_title` for human-readable Claim–Evidence reporting.
+- Added `critical_review.core_weaknesses` with weakness → why it matters → impact → validation chains.
+- Added bounded `research_directions` derived from evidence-backed weaknesses/open questions.
+- Added semantic rules that reject placeholder text in claim strengthening, weakness validation, open-question rationale/validation, and research directions.
+- Added cross-links from core weaknesses to claims and assumptions.
+- Updated guided reading so it can route the reader back to the source most diagnostic for the paper's biggest risk.
+- Updated example, validator, rendering guidance, schema invariants, and agent metadata for schema v1.5.
+
+
 ## 1.4.0 — Traceable & Guided Reading
 
 - Added component-level source coverage matrix.

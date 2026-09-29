@@ -26,3 +26,8 @@ Do not invent Figure/Table/Equation identifiers. If only a section is known, rec
 
 ## Goal
 The path should help a researcher spend limited time on the highest-information parts of the paper, not merely mirror document order.
+
+
+## Tie reading guidance to critique
+
+At least one must-read item should, when possible, point the reader to the source location that is most diagnostic for the paper's biggest risk or strongest core weakness (for example, the decisive ablation, sensitivity table, limitation discussion, or key equation). The reading route should help the user verify both the paper's strongest claim and its most fragile point.

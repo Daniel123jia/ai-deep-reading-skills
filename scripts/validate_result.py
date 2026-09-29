@@ -52,7 +52,7 @@ def nums(text: str) -> set[str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate PaperScope AI Deep Reading v1.4 output")
+    ap = argparse.ArgumentParser(description="Validate PaperScope AI Deep Reading v1.5 output")
     ap.add_argument("result")
     ap.add_argument("--schema", default=None)
     ap.add_argument("--strict-warnings", action="store_true")
@@ -67,16 +67,21 @@ def main() -> int:
     warnings: list[str] = []
 
     if jsonschema is not None:
-        resolver = jsonschema.RefResolver("#", schema, store={"#": schema, schema.get("$id", ""): schema})
-        validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
+        validator_cls = getattr(jsonschema, "Draft202012Validator", jsonschema.Draft7Validator)
+        resolver = jsonschema.RefResolver(
+            "#",
+            schema,
+            store={"": schema, "#": schema, schema.get("$id", ""): schema},
+        )
+        validator = validator_cls(schema, resolver=resolver)
         for e in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path)):
             loc = "$" + "".join(f"[{p}]" if isinstance(p, int) else f".{p}" for p in e.absolute_path)
             errors.append(f"schema {loc}: {e.message}")
     else:
         warnings.append("jsonschema package unavailable; schema validation skipped")
 
-    if data.get("schema_version") != "1.4":
-        errors.append("schema_version must be 1.4")
+    if data.get("schema_version") != "1.5":
+        errors.append("schema_version must be 1.5")
 
     reading_mode = ((data.get("input") or {}).get("reading_mode"))
 
@@ -139,6 +144,9 @@ def main() -> int:
                 errors.append(f"{cp}: duplicate claim id {cid}")
             if cid:
                 claim_map[cid] = c
+            title = (c.get("claim_title") or "").strip()
+            if len(title) < 3:
+                errors.append(f"{cp}: claim_title must be descriptive")
             links = c.get("evidence_links") or []
             if not links:
                 errors.append(f"{cp}: claim requires evidence_links")
@@ -236,6 +244,63 @@ def main() -> int:
         for aid, a in assumption_map.items():
             if a.get("risk_level") == "high" and aid not in fragile_ids:
                 errors.append(f"{base}: high-risk assumption {aid} missing from fragile_assumptions")
+
+        # Actionability: core weaknesses, open questions, research directions
+        crit = paper.get("critical_review") or {}
+        weakness_ids = set()
+        for i, w in enumerate(crit.get("core_weaknesses") or []):
+            wp = f"{base}.critical_review.core_weaknesses[{i}]"
+            wid = w.get("weakness_id")
+            if wid in weakness_ids:
+                errors.append(f"{wp}: duplicate weakness id {wid}")
+            if wid:
+                weakness_ids.add(wid)
+            require_refs(w.get("evidence_refs") or [], wp)
+            for fld in ("why_it_matters", "potential_impact", "suggested_validation"):
+                val = (w.get(fld) or "").strip().lower()
+                if not val:
+                    errors.append(f"{wp}.{fld}: must be substantive")
+                elif any(p.lower() in val for p in PLACEHOLDERS):
+                    errors.append(f"{wp}.{fld}: placeholder is not allowed")
+            for cid in w.get("related_claim_ids") or []:
+                if cid not in claim_map:
+                    errors.append(f"{wp}: related claim {cid} does not exist")
+            for aid in w.get("related_assumption_ids") or []:
+                if aid not in assumption_map:
+                    errors.append(f"{wp}: related assumption {aid} does not exist")
+
+        for i, q in enumerate(paper.get("open_questions") or []):
+            qp = f"{base}.open_questions[{i}]"
+            require_refs(q.get("evidence_refs") or [], qp)
+            for fld in ("why_it_matters", "suggested_validation"):
+                val = (q.get(fld) or "").strip().lower()
+                if not val:
+                    errors.append(f"{qp}.{fld}: must be substantive")
+                elif any(p.lower() in val for p in PLACEHOLDERS):
+                    errors.append(f"{qp}.{fld}: placeholder is not allowed")
+
+        for i, rd in enumerate(paper.get("research_directions") or []):
+            rdp = f"{base}.research_directions[{i}]"
+            require_refs(rd.get("evidence_refs") or [], rdp)
+            for wid in rd.get("related_weakness_ids") or []:
+                if wid not in weakness_ids:
+                    errors.append(f"{rdp}: related weakness {wid} does not exist")
+            for fld in ("target_problem", "rationale", "validation_focus", "boundary_note"):
+                val = (rd.get(fld) or "").strip().lower()
+                if not val:
+                    errors.append(f"{rdp}.{fld}: must be substantive")
+                elif any(p.lower() in val for p in PLACEHOLDERS):
+                    errors.append(f"{rdp}.{fld}: placeholder is not allowed")
+
+        # Standard/reviewer/followup readings should be useful for critique when E2/E3 is available.
+        if reading_mode in ("standard", "reviewer_mode", "followup_mode") and grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS"):
+            if not (crit.get("core_weaknesses") or []):
+                warnings.append(f"{base}: no core_weaknesses produced despite body-text evidence")
+        if reading_mode in ("standard", "followup_mode") and grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS"):
+            if not (paper.get("open_questions") or []):
+                warnings.append(f"{base}: no open_questions produced despite body-text evidence")
+            if not (paper.get("research_directions") or []):
+                warnings.append(f"{base}: no bounded research_directions produced despite body-text evidence")
 
         # Experiments
         ex_ids = set()

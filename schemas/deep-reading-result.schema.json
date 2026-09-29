@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:paperscope:schemas:deep-reading-result:1.4",
-  "title": "PaperScope AI Deep Reading Result",
-  "description": "PaperScope AI Deep Reading v1.4 structured result: traceable claim-evidence grounding, material coverage matrix, experiment-evidence chains, assumption stress tests, guided reading, and evidence backlinks.",
+  "$id": "urn:paperscope:schemas:deep-reading-result:1.5",
+  "title": "PaperScope AI Deep Reading Result v1.5",
+  "description": "Structured output contract for traceable, critical, and guided academic paper deep reading. v1.5 adds explicit core-weakness analysis, bounded research directions, descriptive claim titles, and stricter actionability requirements.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.4"
+      "const": "1.5"
     },
     "analysis_type": {
       "type": "string",
@@ -868,6 +868,7 @@
       "required": [
         "claim_id",
         "importance",
+        "claim_title",
         "claim",
         "evidence_links",
         "paper_internal_support",
@@ -926,6 +927,11 @@
           "items": {
             "$ref": "#/$defs/evidence_link"
           }
+        },
+        "claim_title": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Short user-facing title for the claim, e.g. Core method change or miniImageNet performance. Avoid raw IDs as the visible title."
         }
       }
     },
@@ -1042,6 +1048,7 @@
       "additionalProperties": false,
       "required": [
         "analysis_limitations",
+        "core_weaknesses",
         "fragile_assumptions",
         "reviewer_questions",
         "reproducibility_risks",
@@ -1084,6 +1091,13 @@
           "items": {
             "$ref": "#/$defs/evidence_statement"
           }
+        },
+        "core_weaknesses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/core_weakness_item"
+          },
+          "description": "Top 2-4 PaperScope analysis-derived core weaknesses. Prefer mechanism-level weaknesses over generic missing-experiment complaints."
         }
       }
     },
@@ -1376,6 +1390,7 @@
         "evidence_audit",
         "critical_review",
         "open_questions",
+        "research_directions",
         "reading_guide",
         "contradictions",
         "judgment_card"
@@ -1470,6 +1485,13 @@
           "items": {
             "$ref": "#/$defs/experiment_evidence_item"
           }
+        },
+        "research_directions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/research_direction_item"
+          },
+          "description": "Bounded follow-up directions derived from weaknesses/open questions. Do not generate named architectures or full proposals."
         }
       }
     },
@@ -1810,6 +1832,129 @@
             "type": "string",
             "pattern": "^ev-[0-9]{3,}$"
           }
+        }
+      }
+    },
+    "core_weakness_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weakness_id",
+        "title",
+        "description",
+        "why_it_matters",
+        "potential_impact",
+        "suggested_validation",
+        "evidence_refs",
+        "related_claim_ids",
+        "related_assumption_ids"
+      ],
+      "properties": {
+        "weakness_id": {
+          "type": "string",
+          "pattern": "^wk-[0-9]{3,}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "description": "PaperScope analysis-derived weakness. It must not be written as if explicitly acknowledged by the authors unless separately recorded in author_acknowledged_limitations."
+        },
+        "why_it_matters": {
+          "type": "string",
+          "minLength": 10
+        },
+        "potential_impact": {
+          "type": "string",
+          "minLength": 10
+        },
+        "suggested_validation": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Concrete stress test or analysis that could test the weakness."
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "related_claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^cl-[0-9]{3,}$"
+          }
+        },
+        "related_assumption_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^as-[0-9]{3,}$"
+          }
+        }
+      }
+    },
+    "research_direction_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "direction_id",
+        "title",
+        "target_problem",
+        "rationale",
+        "validation_focus",
+        "evidence_refs",
+        "related_weakness_ids",
+        "boundary_note"
+      ],
+      "properties": {
+        "direction_id": {
+          "type": "string",
+          "pattern": "^rd-[0-9]{3,}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3
+        },
+        "target_problem": {
+          "type": "string",
+          "minLength": 10,
+          "description": "The unresolved problem or mechanism that a follow-up study should investigate."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Why this direction follows from the paper evidence, assumptions, or weaknesses."
+        },
+        "validation_focus": {
+          "type": "string",
+          "minLength": 10,
+          "description": "What a follow-up study should measure or test. Stop at validation focus rather than inventing a named architecture."
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "related_weakness_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^wk-[0-9]{3,}$"
+          }
+        },
+        "boundary_note": {
+          "type": "string",
+          "description": "Explicitly state that this is an analysis-derived direction, not an author-stated proposal, unless the paper says so."
         }
       }
     }

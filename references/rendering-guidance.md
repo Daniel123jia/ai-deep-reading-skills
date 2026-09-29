@@ -1,4 +1,4 @@
-# Rendering Guidance — v1.4
+# Rendering Guidance — v1.5
 
 The backend schema is technical; the user-facing report should be readable and research-oriented.
 
@@ -75,3 +75,11 @@ Prefer:
 
 ## Guided reading
 The final section must tell the reader where to return to the paper and why. A 20-minute reading path should be ordered and actionable.
+
+
+## v1.5 user-facing additions
+
+- Render `claim_title` rather than exposing raw IDs such as `cl-001` as the primary heading. The internal ID may remain hidden or secondary.
+- In section 05, distinguish three layers: author-acknowledged limitations, PaperScope analysis-derived limitations, and the 2–4 **core weaknesses**. Core weaknesses should be visually prominent and include why it matters, potential impact, and how to validate.
+- In section 06, render Open Questions first, then **bounded research directions**, then the guided reading path. Label research directions as PaperScope-derived unless author-stated.
+- Never render placeholder text such as “当前材料未说明” for `what_would_strengthen_it`, weakness validation, open-question rationale, or suggested validation.

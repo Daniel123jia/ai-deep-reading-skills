@@ -1,4 +1,4 @@
-# Schema Invariants — v1.4
+# Schema Invariants — v1.5
 
 These rules define semantic correctness beyond JSON Schema validation.
 
@@ -77,3 +77,13 @@ These rules define semantic correctness beyond JSON Schema validation.
 48. Source conflicts are preserved, not silently reconciled.
 49. A contradiction references at least two evidence refs.
 50. The affected conclusion is marked uncertain or bounded accordingly.
+
+
+## v1.5 invariants
+
+1. Every claim has a non-empty, descriptive `claim_title`; renderers should prefer it to raw claim IDs.
+2. In standard/reviewer/followup modes, if the source boundary is at least E2 and critique is possible, `critical_review.core_weaknesses` should contain the highest-value weaknesses rather than a generic list of missing checks.
+3. Every core weakness must resolve all evidence refs and related claim/assumption IDs.
+4. `why_it_matters`, `potential_impact`, and `suggested_validation` for core weaknesses may not use placeholders such as “当前材料未说明”.
+5. Every open question must contain substantive `why_it_matters` and `suggested_validation`.
+6. Research directions must be analysis-bounded and may not silently become named architecture proposals.

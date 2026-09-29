@@ -1,8 +1,8 @@
-# PaperScope AI Deep Reading Skill v1.4
+# PaperScope AI Deep Reading Skill v1.5
 
 Evidence-grounded academic paper deep reading for PaperScope / Scholar AI.
 
-v1.4 focuses on three goals:
+v1.5 focuses on three goals:
 
 - **More rigorous** — clearer source boundary, experiment protocol reasoning, assumption stress tests, and stronger status semantics.
 - **More traceable** — claim→evidence links, evidence→claim backlinks, numeric grounding checks, contradiction handling.
@@ -11,7 +11,7 @@ v1.4 focuses on three goals:
 ## Main files
 
 - `SKILL.md` — workflow and hard boundaries.
-- `schemas/deep-reading-result.schema.json` — v1.4 output contract.
+- `schemas/deep-reading-result.schema.json` — v1.5 output contract.
 - `references/evidence-rules.md` — evidence semantics.
 - `references/paper-type-lenses.md` — method / empirical / theory / review lenses.
 - `references/experiment-evidence-rules.md` — experiment interpretation protocol.
@@ -19,7 +19,7 @@ v1.4 focuses on three goals:
 - `references/schema-invariants.md` — semantic invariants beyond JSON Schema.
 - `references/rendering-guidance.md` — user-facing report guidance.
 - `scripts/validate_result.py` — schema + semantic QA.
-- `examples/minimal-v1.4.json` — valid reference output.
+- `examples/minimal-v1.5.json` — valid reference output.
 
 ## User-facing six-stage report
 
@@ -53,7 +53,7 @@ The backend is richer than these six sections so the UI can stay simple.
 ## Validate an output
 
 ```bash
-python scripts/validate_result.py examples/minimal-v1.4.json
+python scripts/validate_result.py examples/minimal-v1.5.json
 ```
 
 Expected:
@@ -73,7 +73,7 @@ Retriever + Parser
         ↓
 Structured source bundle
         ↓
-PaperScope AI Deep Reading v1.4
+PaperScope AI Deep Reading v1.5
         ↓
 deep-reading-result.json
         ↓

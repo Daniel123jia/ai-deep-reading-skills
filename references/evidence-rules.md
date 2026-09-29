@@ -1,4 +1,4 @@
-# Evidence Rules — v1.4
+# Evidence Rules — v1.5
 
 These rules govern factual statements, analytical inferences, criticism, novelty judgments, experiment interpretation, and guided reading.
 
@@ -125,3 +125,14 @@ Check:
 - open questions and reading guide are present in standard E2/E3 reading;
 - field novelty obeys external-verification boundary;
 - contradictions are surfaced.
+
+
+## Actionability Rules (v1.5)
+
+For a standard deep-reading report, critique must be actionable rather than merely cautionary.
+
+- `what_would_strengthen_it` is an analysis field. It must propose a concrete comparison, ablation, stress test, statistical check, dataset expansion, or source verification when relevant. Do not write “current materials do not specify”.
+- `core_weaknesses` are PaperScope analysis-derived. Each weakness must state why it matters, potential impact, and suggested validation.
+- Open questions must include both `why_it_matters` and `suggested_validation`; placeholders are invalid.
+- `research_directions` may point to a mechanism or empirical question worth pursuing, but must stop at target problem + rationale + validation focus. Do not auto-name a new model or invent an architecture.
+- Missing external replication is not by itself a core weakness of a paper. Treat it as verification status unless the paper's central claim depends on independent reproducibility evidence.

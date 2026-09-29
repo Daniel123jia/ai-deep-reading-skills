@@ -1,5 +1,5 @@
 name: paperscope-ai-deep-reading
-version: 1.4.0
+version: 1.5.0
 description: >
   Deep-read academic papers with traceable claim-evidence grounding,
   experiment-evidence chains, assumption stress tests, and guided return-to-source reading.
@@ -34,11 +34,11 @@ reading_modes:
     description: Emphasize Method Diff, modules, equations, assumptions, and ablations.
 
 output:
-  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.4
+  primary: structured JSON conforming to schemas/deep-reading-result.schema.json v1.5
   secondary: optional concise conversational summary
 
 constraints:
-  schema_version: "1.4"
+  schema_version: "1.5"
   max_papers_per_call: 5
   min_evidence_grade_for_deep_reading: E2_BODY_TEXT
   require_source_boundary: true
@@ -54,3 +54,5 @@ model_notes: >
   be traceable to direct numeric evidence. Standard E2/E3 reading should include open
   questions and a source-grounded reading path. Never invent locators, snippets, formulas,
   figures, tables, field novelty, or universal conclusions.
+
+  v1_5_notes: Require core weaknesses, actionable claim strengthening, bounded research directions, and guided return-to-source reading.

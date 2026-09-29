@@ -1,10 +1,10 @@
 ---
 name: paperscope-ai-deep-reading
-version: 1.4.0
+version: 1.5.0
 description: Evidence-grounded academic paper deep reading with claim-level traceability, experiment-evidence chains, assumption stress tests, and guided return-to-source reading.
 ---
 
-# PaperScope AI Deep Reading v1.4
+# PaperScope AI Deep Reading v1.5
 
 Use this skill when the user asks to deeply read, understand, audit, critique, or methodically inspect one academic paper (or a small set of closely related papers, max 5).
 
@@ -16,7 +16,7 @@ The goal is **not to summarize a paper so the user no longer needs the paper**. 
 4. What remains uncertain, fragile, or unverified?
 5. Where should the user return to the original paper, and why?
 
-The canonical output is structured JSON conforming to `schemas/deep-reading-result.schema.json` v1.4. A renderer may convert it to Web, DOCX, Markdown, or PDF.
+The canonical output is structured JSON conforming to `schemas/deep-reading-result.schema.json` v1.5. A renderer may convert it to Web, DOCX, Markdown, or PDF.
 
 This skill is not a PDF parser, retriever, citation graph builder, venue recommender, or document formatting engine. Prefer structured source material from an upstream parser/retriever.
 
@@ -45,6 +45,12 @@ Do not output arbitrary 0–100 scores, A+/B rankings, acceptance probabilities,
 
 ### 6. Guide the reader back to the paper
 The final report must identify the most important sections, tables, figures, equations, and discussion passages to revisit. The report should function as a map into the original paper.
+
+### 7. Critique must be actionable
+Do not stop at “there is a limitation”. For the most consequential weaknesses, state why they matter, what could break, which claim/assumption they threaten, and a concrete validation or stress test.
+
+### 8. Follow-up directions are bounded, not invention generation
+The report may identify promising research directions derived from weaknesses and open questions, but it must stop at target problem + rationale + validation focus. Do not invent a named network, detailed architecture, or full proposal unless a separate innovation-generation task is requested.
 
 ---
 
@@ -209,6 +215,7 @@ This step is where experiment protocol fairness, backbone comparability, metrics
 For each important claim:
 
 - stable `claim_id`;
+- short descriptive `claim_title` for user-facing reports;
 - importance: core / secondary / context;
 - plain-language claim and semantic status;
 - one or more evidence links with relation (`direct`, `indirect`, `context`, `contradictory`);
@@ -230,8 +237,21 @@ Only explicit author statements, with evidence.
 ### PaperScope analysis-derived limitations
 Specific, falsifiable limitations or alternative explanations grounded in inspected material.
 
+### PaperScope core weaknesses
+Select the 2–4 most consequential mechanism-level weaknesses. For each one, provide:
+
+- a short descriptive title;
+- what the weakness is;
+- why it matters;
+- the potential impact on claims, generalization, efficiency, or interpretation;
+- a concrete validation/stress test;
+- related claim IDs and assumption IDs when applicable;
+- evidence refs.
+
+Do not merely restate missing experiments as “core weaknesses” unless the missing experiment is essential to a central claim.
+
 ### Fragile assumptions
-Reference assumptions by `assumption_id` and explain failure modes.
+Reference assumptions by `assumption_id` and explain failure modes and stress tests.
 
 ### Reviewer questions
 Prefer the top 3 high-value questions rather than a long generic list.
@@ -239,17 +259,26 @@ Prefer the top 3 high-value questions rather than a long generic list.
 ### Applicability boundary
 State where the method/argument is supported and where generalization remains untested.
 
-## Step 11 — Open questions
+## Step 11 — Open questions and bounded research directions
 Standard deep reading must produce grounded open questions when the paper supplies enough material.
 
-Each question includes:
+Each open question includes:
 
 - origin (`author_stated` or `analysis_derived`);
 - why it matters;
 - a bounded validation/investigation plan;
 - evidence refs.
 
-Stop at validation. Do not automatically invent a named new network or full research proposal; that belongs to a separate innovation-generation workflow.
+Then derive a small set of `research_directions` from the strongest open questions and core weaknesses. Each direction must contain:
+
+- the target problem;
+- why it follows from the paper;
+- the validation focus;
+- related weakness IDs;
+- evidence refs;
+- a boundary note making clear this is PaperScope analysis unless the author explicitly proposed it.
+
+Stop at validation focus. Do not automatically invent a named new network, architecture, module stack, or full research proposal; that belongs to a separate innovation-generation workflow.
 
 ## Step 12 — Guided return-to-source reading
 Read `references/guided-reading-rules.md`.
@@ -288,6 +317,10 @@ Before final output:
 - standard mode contains open questions and a reading guide;
 - no `what_would_strengthen_it` field is a placeholder;
 - author limitations and analysis limitations are not mixed;
+- standard mode contains at least one concrete core weakness when the paper has enough material for critique;
+- every core weakness has why-it-matters + potential impact + suggested validation;
+- every open question has why-it-matters + suggested validation;
+- research directions are bounded and do not silently become invention proposals;
 - experiment conclusions do not exceed tested conditions.
 
 Run `scripts/validate_result.py` after generation whenever the environment permits.
@@ -296,7 +329,7 @@ Run `scripts/validate_result.py` after generation whenever the environment permi
 
 ## Output contract
 
-Return JSON conforming to `schemas/deep-reading-result.schema.json` v1.4.
+Return JSON conforming to `schemas/deep-reading-result.schema.json` v1.5.
 
 The renderer should expose a simple six-stage user report:
 

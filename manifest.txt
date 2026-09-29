@@ -4,7 +4,8 @@ README.md
 SKILL.md
 VERSION
 agents/openai.yaml
-examples/minimal-v1.4.json
+examples/minimal-v1.5.json
+references/critical-followup-rules.md
 references/evidence-rules.md
 references/experiment-evidence-rules.md
 references/guided-reading-rules.md
