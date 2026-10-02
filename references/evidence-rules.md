@@ -1,4 +1,4 @@
-# Evidence Rules — v1.5
+# Evidence Rules — v1.6
 
 These rules govern factual statements, analytical inferences, criticism, novelty judgments, experiment interpretation, and guided reading.
 
@@ -127,7 +127,7 @@ Check:
 - contradictions are surfaced.
 
 
-## Actionability Rules (v1.5)
+## Actionability Rules (v1.6)
 
 For a standard deep-reading report, critique must be actionable rather than merely cautionary.
 
@@ -136,3 +136,14 @@ For a standard deep-reading report, critique must be actionable rather than mere
 - Open questions must include both `why_it_matters` and `suggested_validation`; placeholders are invalid.
 - `research_directions` may point to a mechanism or empirical question worth pursuing, but must stop at target problem + rationale + validation focus. Do not auto-name a new model or invent an architecture.
 - Missing external replication is not by itself a core weakness of a paper. Treat it as verification status unless the paper's central claim depends on independent reproducibility evidence.
+
+## Evidence inventory completeness (v1.6)
+Before analysis, populate the evidence inventory for problem framing, method/argument, main results, ablations/sensitivity, limitations, and critical artifacts. Empty categories are allowed only when genuinely absent or unavailable; record missing critical evidence explicitly.
+
+For standard E2/E3 reading, an evidence index that is too thin to support the report should trigger a warning rather than being padded with invented items.
+
+## Critical + creative reading (v1.6)
+Critique should identify what may fail, but also what mechanism or experimental design is worth carrying forward. Do not turn creative reading into unverified novelty claims.
+
+## Triage judgment (v1.6)
+The judgment card should explain why the paper is worth the user's time and give a bounded next research direction. Reading priority is a decision aid, not a quality ranking of the paper.

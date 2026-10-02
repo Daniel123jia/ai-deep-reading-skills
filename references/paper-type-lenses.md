@@ -1,62 +1,30 @@
-# Paper-Type Lenses
+# Paper-type lenses
 
-Use one primary lens. The six-stage user report remains stable, but the internal questions adapt to the paper type.
+Classify by argument and evidence logic, not discipline label. Use one primary lens and at most one secondary lens.
 
-## Method paper
-Prioritize:
-- Problem and method delta
-- Module purpose/input/operation/output
-- Key equations
-- Training vs inference behavior
-- Assumptions
-- Main comparison and ablation
-- Backbone/budget/baseline fairness
-- Complexity and scaling
-- Failure conditions
+## method
+Focus on method delta, modules, assumptions, formulas, ablations, baseline fairness, budget, inference cost, and whether experiments isolate the claimed mechanism.
 
-Reading chain:
-`Method Diff → Modules → Equation → Assumptions → Main Results → Ablation → Boundary`
+## empirical
+Focus on theory/constructs, hypotheses, sample, measurement, identification/design, statistical model, robustness, uncertainty, alternative explanations, and generalizability.
 
-## Empirical paper
-Prioritize:
-- Theory / constructs / hypotheses
-- Sample and population
-- Measurement validity
-- Identification / experimental design
-- Statistical model
-- Main effects and effect sizes
-- Robustness / alternative explanations
-- Generalization boundary
+## theory
+Focus on assumptions, definitions, theorem/model structure, proof/derivation strategy, identifiability, boundary conditions, and what changes when assumptions are relaxed.
 
-Reading chain:
-`Question → Theory → Measurement → Design → Results → Robustness → Contribution`
+## review
+Focus on scope, search/selection process, taxonomy, research streams, consensus, disagreement, evidence gaps, and whether future directions follow from the reviewed literature.
 
-## Theory paper
-Prioritize:
-- Assumptions
-- Definitions
-- Model primitives
-- Main theorem / proposition
-- Proof or derivation strategy
-- Comparative statics / implications
-- Boundary cases
+## resource
+Focus on dataset/resource construction, sampling, annotation, coverage, leakage, quality control, benchmark design, access, licensing, and whether the resource supports the claimed use cases.
 
-Reading chain:
-`Assumptions → Definitions → Main Result → Proof Strategy → Implications → Boundary`
+## discovery
+Focus on empirical phenomenon/mechanism, experimental controls, causality strength, competing explanations, replication, and whether the proposed mechanism is necessary/sufficient or merely consistent with the data.
 
-## Review paper
-Prioritize:
-- Scope
-- Search / inclusion method when present
-- Taxonomy
-- Research streams
-- Consensus vs disagreement
-- Evidence quality across streams
-- Gaps and future directions
+## clinical
+Focus on population, inclusion/exclusion, endpoint definition, intervention/exposure, confounding, missingness, calibration, external validity, clinical effect size, and safety/decision consequences.
 
-Reading chain:
-`Scope → Selection → Taxonomy → Streams → Consensus/Disagreement → Gaps`
+## materials
+Focus on synthesis/fabrication, characterization, structure–property mechanism, baselines, operating conditions, stability, reproducibility, scale-up constraints, and whether measured gains survive realistic conditions.
 
-## General paper
-Use the universal chain:
-`Problem → Gap → Assumptions → Core Idea → Evidence → Claim → Boundary → Open Question`
+## general
+Use the universal Problem → Gap → Method/Argument → Evidence → Boundary → Open Question chain without forcing domain-specific checks.

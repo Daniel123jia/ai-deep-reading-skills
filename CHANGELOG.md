@@ -1,37 +1,26 @@
 # Changelog
 
-## 1.5.0 — Traceable Critical Reading
+## 1.6.0
 
-- Added `claim_title` for human-readable Claim–Evidence reporting.
-- Added `critical_review.core_weaknesses` with weakness → why it matters → impact → validation chains.
-- Added bounded `research_directions` derived from evidence-backed weaknesses/open questions.
-- Added semantic rules that reject placeholder text in claim strengthening, weakness validation, open-question rationale/validation, and research directions.
-- Added cross-links from core weaknesses to claims and assumptions.
-- Updated guided reading so it can route the reader back to the source most diagnostic for the paper's biggest risk.
-- Updated example, validator, rendering guidance, schema invariants, and agent metadata for schema v1.5.
+### Researcher reading model
+- Introduced `Triage → Reconstruct → Verify → Critique → Transfer` as the internal reading workflow.
+- Clarified that Deep Reading is a research decision/navigation layer, not a paper-replacement summary.
 
+### Grounding
+- Added required `evidence_inventory` before interpretation.
+- Added required `paper_lens` with one primary and optional secondary lens.
+- Expanded paper lenses to method, empirical, theory, review, resource, discovery, clinical, materials, and general.
 
-## 1.4.0 — Traceable & Guided Reading
+### Research judgment
+- Added `why_read` and `next_research_direction` to the judgment card.
+- Kept reading priority as a decision aid rather than a paper-quality score.
 
-- Added component-level source coverage matrix.
-- Added evidence roles and Evidence → Claim backlinks.
-- Replaced plain claim evidence refs with relation-aware evidence links.
-- Added structured research-gap analysis: author problem, claimed gap, PaperScope bottleneck, gap assessment.
-- Added experiment-evidence chains with protocol risks and bounded conclusions.
-- Added assumption `why_needed` and `stress_test` fields.
-- Added optional key-equation explanations for method/theory papers.
-- Added structured 20-minute return-to-source reading path.
-- Expanded research judgment card with core problem/method/innovation/evidence/risk/open-question fields.
-- Added paper-type lenses and guided-reading rules.
-- Strengthened semantic validator for backlinks, numeric grounding, coverage coherence, assumption stress tests, experiment evidence, and reading-guide completeness.
+### Guided reading
+- Added minute budgets to the 20-minute reading path.
+- Added validation that the path totals roughly 15–25 minutes.
 
-## 1.3.0
+### Knowledge transfer
+- Added optional `knowledge_takeaways` sidecar for future knowledge-base workflows without creating a seventh visible report section.
 
-- Corrected `unknown` semantics.
-- Separated author limitations from PaperScope analysis limitations.
-- Separated paper-internal support from external verification.
-- Added stable assumption IDs, open questions, reading guide, contradictions, and semantic validation.
-
-## 1.2.0
-
-- Added source boundary, evidence coverage, locator modes, claim-level support boundaries, structured modules, and novelty verification.
+### QA
+- Validator now checks paper-lens coherence, evidence-inventory references, judgment-card actionability, thin inventories, and reading-route time budgets.

@@ -52,7 +52,7 @@ def nums(text: str) -> set[str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate PaperScope AI Deep Reading v1.5 output")
+    ap = argparse.ArgumentParser(description="Validate PaperScope AI Deep Reading v1.6 output")
     ap.add_argument("result")
     ap.add_argument("--schema", default=None)
     ap.add_argument("--strict-warnings", action="store_true")
@@ -67,21 +67,15 @@ def main() -> int:
     warnings: list[str] = []
 
     if jsonschema is not None:
-        validator_cls = getattr(jsonschema, "Draft202012Validator", jsonschema.Draft7Validator)
-        resolver = jsonschema.RefResolver(
-            "#",
-            schema,
-            store={"": schema, "#": schema, schema.get("$id", ""): schema},
-        )
-        validator = validator_cls(schema, resolver=resolver)
+        validator = jsonschema.Draft202012Validator(schema)
         for e in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path)):
             loc = "$" + "".join(f"[{p}]" if isinstance(p, int) else f".{p}" for p in e.absolute_path)
             errors.append(f"schema {loc}: {e.message}")
     else:
         warnings.append("jsonschema package unavailable; schema validation skipped")
 
-    if data.get("schema_version") != "1.5":
-        errors.append("schema_version must be 1.5")
+    if data.get("schema_version") != "1.6":
+        errors.append("schema_version must be 1.6")
 
     reading_mode = ((data.get("input") or {}).get("reading_mode"))
 
@@ -92,6 +86,15 @@ def main() -> int:
         grade = boundary.get("evidence_grade")
         coverage_level = ((boundary.get("evidence_coverage") or {}).get("level"))
         context_mode = boundary.get("context_mode")
+
+        # Paper lens
+        lens = paper.get("paper_lens") or {}
+        primary_lens = lens.get("primary")
+        secondary_lens = lens.get("secondary")
+        if secondary_lens is not None and secondary_lens == primary_lens:
+            warnings.append(f"{base}.paper_lens: secondary lens duplicates primary lens")
+        if not (lens.get("rationale") or "").strip():
+            errors.append(f"{base}.paper_lens.rationale: required")
 
         # Evidence inventory
         evs = paper.get("evidence_refs") or []
@@ -118,6 +121,18 @@ def main() -> int:
             for ref in refs or []:
                 if ref not in ev_map:
                     errors.append(f"{where}: unresolved evidence ref {ref}")
+
+        # Evidence inventory links must resolve
+        inv = paper.get("evidence_inventory") or {}
+        for key in ("problem_framing_ids", "method_ids", "main_result_ids", "ablation_ids", "limitation_ids"):
+            require_refs(inv.get(key) or [], f"{base}.evidence_inventory.{key}")
+        if reading_mode == "standard" and grade in ("E2_BODY_TEXT", "E3_BODY_PLUS_ARTIFACTS"):
+            if len(ev_map) < 4:
+                warnings.append(f"{base}: standard body-text reading has fewer than 4 evidence items; inventory may be too thin")
+            if not (inv.get("method_ids") or []):
+                warnings.append(f"{base}: evidence_inventory.method_ids is empty")
+            if not (inv.get("main_result_ids") or []):
+                warnings.append(f"{base}: evidence_inventory.main_result_ids is empty")
 
         # All evidence statements
         for spath, st in walk_evidence_statements(paper, base):
@@ -362,6 +377,21 @@ def main() -> int:
             require_refs(item.get("evidence_refs") or [], f"{base}.reading_guide.items[{i}]")
         for i, step in enumerate(path):
             require_refs(step.get("evidence_refs") or [], f"{base}.reading_guide.twenty_minute_path[{i}]")
+
+        # Research judgment card
+        jc = paper.get("judgment_card") or {}
+        for fld in ("why_read", "next_research_direction"):
+            val = (jc.get(fld) or "").strip().lower()
+            if not val:
+                errors.append(f"{base}.judgment_card.{fld}: must be substantive")
+            elif any(p.lower() in val for p in PLACEHOLDERS):
+                errors.append(f"{base}.judgment_card.{fld}: placeholder is not allowed")
+
+        # 20-minute path should be approximately 15–25 minutes
+        if path:
+            total_minutes = sum(int(step.get("minutes") or 0) for step in path if isinstance(step, dict))
+            if total_minutes and not (15 <= total_minutes <= 25):
+                warnings.append(f"{base}.reading_guide.twenty_minute_path totals {total_minutes} minutes; expected roughly 15–25")
 
         # Contradictions
         cx_ids = set()

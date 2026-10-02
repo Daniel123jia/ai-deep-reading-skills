@@ -1,337 +1,317 @@
 ---
 name: paperscope-ai-deep-reading
-version: 1.5.0
-description: Evidence-grounded academic paper deep reading with claim-level traceability, experiment-evidence chains, assumption stress tests, and guided return-to-source reading.
+version: 1.6.0
+description: Evidence-grounded academic deep reading that helps users triage, reconstruct, verify, critique, and transfer one paper, with claim-level traceability and a guided return-to-source reading path.
 ---
 
-# PaperScope AI Deep Reading v1.5
+# PaperScope / Scholar AI Deep Reading v1.6
 
-Use this skill when the user asks to deeply read, understand, audit, critique, or methodically inspect one academic paper (or a small set of closely related papers, max 5).
+Use this skill to deeply read one academic paper and produce a structured, evidence-grounded research judgment. The goal is **not** to replace the paper with a longer summary. The goal is to help a researcher decide:
 
-The goal is **not to summarize a paper so the user no longer needs the paper**. The goal is to help the user answer:
+1. Is this paper worth more attention?
+2. What problem and gap does it actually address?
+3. What did the paper truly change relative to its own prior-work framing?
+4. What evidence supports each important claim, and where do the conclusions stop?
+5. Which assumptions, weaknesses, failure modes, and missing controls matter most?
+6. What should the reader return to in the original paper, and what follow-up questions are worth testing?
 
-1. What does this paper actually claim?
-2. What evidence supports each important claim?
-3. What assumptions and boundaries does the argument depend on?
-4. What remains uncertain, fragile, or unverified?
-5. Where should the user return to the original paper, and why?
+The canonical output is JSON conforming to `schemas/deep-reading-result.schema.json` v1.6. Rendering is delegated to Scholar-Format-Engine.
 
-The canonical output is structured JSON conforming to `schemas/deep-reading-result.schema.json` v1.5. A renderer may convert it to Web, DOCX, Markdown, or PDF.
+This skill is not a PDF parser, bibliography manager, novelty-search engine, reviewer-decision engine, or document formatter. Prefer reliable source material from an upstream parser/retriever.
 
-This skill is not a PDF parser, retriever, citation graph builder, venue recommender, or document formatting engine. Prefer structured source material from an upstream parser/retriever.
+---
+
+## Product philosophy: five research-reading tasks
+
+Every standard run should internally follow this sequence:
+
+`Triage → Reconstruct → Verify → Critique → Transfer`
+
+### Triage
+Decide why the paper may be worth the reader's time. Identify the core problem, real method delta, strongest evidence, biggest risk, and recommended reading priority.
+
+### Reconstruct
+Rebuild the research logic:
+
+`Problem → Prior limitation → Gap/Bottleneck → Core idea → Method/Argument → Expected effect`
+
+### Verify
+Map major claims to the experiments, tables, figures, equations, proofs, or source passages that support them. Separate paper-internal support from external replication.
+
+### Critique
+Identify the 2–4 most consequential weaknesses, fragile assumptions, missing controls, alternative explanations, and failure modes. Critique must be specific and falsifiable.
+
+### Transfer
+Extract bounded open questions, follow-up research directions, and a source-grounded 20-minute reading route. Do not invent a named architecture or full research proposal unless a separate innovation-generation task is requested.
+
+Read `references/researcher-reading-framework.md` for the full internal model.
 
 ---
 
 ## Core principles
 
 ### 1. Evidence before interpretation
-Build the source boundary and evidence inventory before drafting analysis. Do not draft a confident conclusion first and search for evidence afterward.
+Build the source boundary and evidence inventory before writing analytical conclusions.
 
-### 2. Paper-internal support is separate from external verification
-A result can be strongly supported by the paper's own directly inspected experiments even if the result has not been independently reproduced. Track external verification separately.
+### 2. Evidence inventory must be explicit
+Before analysis, identify where the paper's central evidence actually lives: problem framing, method definition, main results, ablations/sensitivity tests, limitations, and critical artifacts.
 
-### 3. `reported`, `inferred`, and `unknown` are semantic states
-- `reported`: explicitly stated in inspected source material; must have evidence.
-- `inferred`: PaperScope analysis grounded in inspected source material.
-- `unknown`: the inspected materials genuinely do not establish the point.
+### 3. Paper-internal support ≠ external verification
+A paper can internally support a claim strongly even when no third-party replication has been checked. Track these separately.
 
-Do **not** write a detailed substantive proposition and label it `unknown`.
+### 4. Provenance is semantic
+- `reported`: explicitly stated in inspected paper material; requires evidence.
+- `inferred`: Scholar AI/PaperScope analysis grounded in inspected material.
+- `unknown`: the inspected material genuinely does not establish the point.
 
-### 4. No fake source text
-`snippet` contains only short verbatim text from inspected material. Never generate, clean up, or reconstruct a plausible source quote.
+Never write a substantive proposition and label it `unknown` merely because the paper did not phrase the analysis exactly that way.
 
-### 5. No fake precision
-Do not output arbitrary 0–100 scores, A+/B rankings, acceptance probabilities, or evidence percentages. Use calibrated qualitative judgments with reasons.
+### 5. No fake source text or locators
+`snippet` is verbatim source text only. Do not reconstruct quotations. Do not invent page, figure, table, equation, or section numbers.
 
-### 6. Guide the reader back to the paper
-The final report must identify the most important sections, tables, figures, equations, and discussion passages to revisit. The report should function as a map into the original paper.
+### 6. No fake precision or pseudo-ranking
+Do not output arbitrary 0–100 scores, A+/B grades, or acceptance probabilities. Use qualitative judgments with reasons.
 
-### 7. Critique must be actionable
-Do not stop at “there is a limitation”. For the most consequential weaknesses, state why they matter, what could break, which claim/assumption they threaten, and a concrete validation or stress test.
+### 7. Critical + creative reading
+Do not only ask “what is wrong?”. Also identify what idea is worth preserving, what mechanism is transferable, and which unresolved question could support a useful follow-up study.
 
-### 8. Follow-up directions are bounded, not invention generation
-The report may identify promising research directions derived from weaknesses and open questions, but it must stop at target problem + rationale + validation focus. Do not invent a named network, detailed architecture, or full proposal unless a separate innovation-generation task is requested.
+### 8. Main report should guide the reader back to the paper
+The deep-reading result must include a reading guide. The report is a navigation layer over the paper, not a substitute for the paper.
 
 ---
 
-## Reading mode routing
+## Reading modes
 
-Resolve `input.reading_goal` before analysis.
+Resolve `input.reading_mode` first.
 
-| Mode | Typical request | Focus |
+| Mode | Purpose | Default emphasis |
 |---|---|---|
-| `standard` | 精读 / deep read / 全面分析 | Full workflow |
-| `quick_summary` | 快速判断 / TL;DR | Judgment card + research question, but grounding core still runs |
-| `reviewer_mode` | 审稿 / 找问题 | Claims, evidence, limitations, assumptions, reviewer questions |
-| `followup_mode` | 下一步 / 研究方向 | Open questions, fragile assumptions, validation paths |
-| `method_only` | 方法 / 算法 / 技术细节 | Method Diff, modules, equations, assumptions, ablations |
+| `standard` | normal deep reading | full five-task workflow |
+| `quick_summary` | fast triage | judgment card + problem/gap + grounding core |
+| `reviewer_mode` | critique | claims, evidence, weaknesses, reviewer questions |
+| `followup_mode` | research continuation | fragile assumptions, open questions, validation paths |
+| `method_only` | technical mechanism | Method Diff, modules, equations, assumptions, ablations |
 
-Default: `standard`.
-
-Even in `quick_summary`, always run: identity → source boundary → evidence inventory → final QA.
+Even `quick_summary` must run identity → source boundary → evidence inventory → QA.
 
 ---
 
 ## Source boundary
 
-Separate four concepts:
+Track four independent concepts:
 
-- **Evidence grade**: what type of material was inspected (`E0`–`E3`).
-- **Evidence coverage**: whether the inspected material is sufficient for the current reading task.
-- **Locator mode**: how precisely a source can be located.
-- **Context mode**: whether the analysis is paper-only or externally checked.
+- **Evidence grade**: material type inspected (`E0`–`E3`).
+- **Evidence coverage**: whether the material is enough for the requested reading task.
+- **Locator mode**: how precisely evidence can be located.
+- **Context mode**: paper-only vs external verification.
 
-### Evidence grade
-
-- `E0_TITLE_METADATA`
-- `E1_ABSTRACT`
-- `E2_BODY_TEXT`
-- `E3_BODY_PLUS_ARTIFACTS`
-
-`deep_reading` normally requires E2 or E3. E0/E1 produce `limited_reading`.
-
-### Locator mode
+### Locator modes
 
 - `page_grounded`: reliable PDF page indices exist.
-- `structure_grounded`: reliable sections/figures/tables/equations exist, but page numbers are not reliable.
-- `source_limited`: only metadata, abstract, or partial source snippets are reliable.
+- `structure_grounded`: reliable section/figure/table/equation/block locators exist, but page numbers are unreliable.
+- `source_limited`: only metadata, abstract, or partial excerpts are reliable.
 
-If `structure_grounded`, do not emit PDF page numbers.
+If `structure_grounded`, never emit PDF page numbers.
 
-### Coverage matrix
-
-Populate source coverage for metadata, abstract, body text, sections, tables, figures, equations, appendix, supplement, code, and external literature. This is the human-meaningful explanation behind “材料覆盖：充分/部分/有限”.
+Populate the component-level coverage matrix for body text, sections, tables, figures, equations, appendix, supplement, code, and external literature.
 
 ---
 
-## Paper-type lenses
+## Paper lenses
 
-Classify one primary type: `method`, `empirical`, `theory`, `review`, or `general`.
+Classify one primary lens and at most one secondary lens:
 
-Read `references/paper-type-lenses.md` and apply the corresponding lens. Do not force a method-paper template onto empirical or theoretical work.
+- `method`
+- `empirical`
+- `theory`
+- `review`
+- `resource`
+- `discovery`
+- `clinical`
+- `materials`
+- `general`
+
+Choose by argument/evidence structure, not field name. A methods paper with a substantial dataset contribution may use `method + resource`.
+
+Read `references/paper-type-lenses.md`.
 
 ---
 
 # Workflow
 
-## Step 0 — Resolve mode and identity
-Record the exact paper/version being analyzed. Distinguish the analyzed file/version from publication metadata when known.
+## Step 0 — Identify the exact paper/version
+Record the analyzed file/version separately from publication metadata. Do not silently merge arXiv, conference, and journal versions.
 
-## Step 1 — Establish source boundary
-Set evidence grade, evidence coverage, locator mode, context mode, coverage matrix, and a short boundary note.
+## Step 1 — Establish the source boundary
+Set evidence grade, coverage, locator mode, context mode, coverage matrix, and boundary note.
 
 ## Step 2 — Build the evidence inventory
-Before drafting interpretation, enumerate the evidence-bearing source objects actually inspected:
+Before interpretation, assign stable `ev-###` IDs to inspected evidence.
 
-- key problem-framing passages;
-- method definitions;
-- main figures/tables/equations;
-- main result tables;
-- ablations;
-- robustness/sensitivity studies;
-- datasets / samples / metrics / baselines;
-- author interpretations;
-- author-stated limitations / constraints;
-- external context when explicitly retrieved.
+At minimum, inventory:
 
-Assign stable `ev-###` IDs. Each evidence ref includes an evidence role and a source locator.
+- problem framing;
+- method/argument definition;
+- main results;
+- central ablations or sensitivity analyses;
+- experimental protocol;
+- author limitations/constraints;
+- essential figures/tables/equations;
+- missing critical evidence.
 
-For evidence that later supports claims, maintain `supported_claim_ids` backlinks.
+Populate `evidence_inventory` before drafting the report.
 
-## Step 3 — Build the paper map
-Map section outline, inspected figures/tables/equations, datasets, metrics, baselines, ablations, and main references.
+## Step 3 — Build the paper map and paper lens
+Map sections, figures, tables, equations, datasets/samples, metrics, baselines, ablations, and major references. Mark artifacts inspected only when actually inspected.
 
-Mark visual/math artifacts `inspected: true` only if they were actually inspected, not merely mentioned in extracted prose.
+## Step 4 — Triage / research judgment
+Create a concise judgment card answering:
 
-## Step 4 — Analyze the research problem and Gap
-Produce both `research_question` and `research_gap`.
+- core problem;
+- core method;
+- paper-relative innovation;
+- strongest evidence;
+- biggest risk / weakness;
+- most important assumption/open question;
+- why the paper is worth reading;
+- the most promising bounded next research direction;
+- reading priority and reason.
 
+This is the “3-minute decision layer”, not a full summary.
+
+## Step 5 — Reconstruct the research problem and Gap
 Separate:
 
-1. **Author problem framing** — what problem the paper says it addresses.
-2. **Author claimed gap** — why prior approaches are said to be insufficient.
-3. **PaperScope bottleneck** — the actual technical/theoretical bottleneck inferred from the paper.
-4. **Gap assessment** — `established`, `partially_established`, `narrative_overreach`, or `unclear`, with evidence-backed rationale.
+1. Author problem framing.
+2. Author-claimed gap.
+3. Scholar AI/PaperScope analysis of the actual bottleneck.
+4. Gap assessment: `established`, `partially_established`, `narrative_overreach`, or `unclear`.
 
-Do not confuse an experimental question with the underlying research Gap.
+Do not confuse an experimental question with the actual research Gap.
 
-## Step 5 — Analyze the method or argument
-For method papers, structure the core change as:
+## Step 6 — Reconstruct the method/argument
+For method papers, use:
 
 `Previous → Problem → Proposed → Mechanism → Expected Effect`
 
-Then decompose major modules into:
+Then decompose key modules into purpose, input, operation, output, why needed, measured effect (if tested), and evidence.
 
-- purpose;
-- input;
-- operation;
-- output;
-- why needed;
-- measured effect, if actually tested;
-- evidence refs.
+For essential formulas/theorems, explain purpose, symbols, intuition, and verification status. Never reconstruct missing formulas from prose.
 
-For key equations/theorems that are reliably available, explain:
+## Step 7 — Audit assumptions
+For each meaningful assumption:
 
-- what the equation is for;
-- essential symbols;
-- intuition;
-- source verification status.
+`Assumption → Why Needed → Failure Mode → Stress Test`
 
-Do not invent formulas from prose.
+An empirical hypothesis that the paper is trying to establish is not automatically an assumption. Avoid circular assumptions such as “the proposed method is better”.
 
-## Step 6 — Identify assumptions
-For each meaningful assumption, assign:
+## Step 8 — Separate paper-relative delta from field novelty
+- `paper_relative_delta`: what changed relative to the prior work discussed by the paper.
+- `field_novelty`: only after external literature verification.
 
-- `assumption_id`;
-- provenance: `explicit` / `inferred`;
-- risk: `low` / `medium` / `high`;
-- why the method needs it;
-- failure mode;
-- stress test;
-- evidence refs.
+When `context_mode = paper_only`, field novelty stays unverified/null.
 
-A hypothesis the paper is trying to prove is not automatically an assumption. Avoid circular “assumptions” such as “the proposed method is better”.
+## Step 9 — Build experiment-evidence chains
+For every experiment that materially affects the conclusion, record:
 
-## Step 7 — Analyze contribution and novelty
-Separate:
+`Purpose → Claim tested → Design/Conditions → Result → Supported conclusion → Unsupported stronger conclusion → Protocol risks`
 
-- **paper-relative delta**: what changed relative to the prior work discussed by this paper;
-- **field novelty**: only populate after external literature verification.
-
-If `context_mode = paper_only`, field novelty must remain unverified/null.
-
-Do not treat an experiment table or benchmark coverage as a method innovation merely because it appears in the contribution list.
-
-## Step 8 — Build experiment-evidence chains
-For every experiment that materially affects the paper's conclusions, record:
-
-`Purpose → Design → Comparison/Conditions → Result → Supported Conclusion → Unsupported Stronger Conclusion → Protocol Risks`
+Assess baseline fairness, backbone parity, data augmentation, sample split, budget, uncertainty, significance, oracle inputs, and generalization where relevant.
 
 Read `references/experiment-evidence-rules.md`.
 
-This step is where experiment protocol fairness, backbone comparability, metrics, sample splits, training budgets, confidence intervals, and significance evidence are assessed.
+## Step 10 — Build the Claim–Evidence map
+Each important claim requires:
 
-## Step 9 — Build Claim–Evidence map
-For each important claim:
-
-- stable `claim_id`;
-- short descriptive `claim_title` for user-facing reports;
+- stable `claim_id` and short user-facing `claim_title`;
 - importance: core / secondary / context;
-- plain-language claim and semantic status;
-- one or more evidence links with relation (`direct`, `indirect`, `context`, `contradictory`);
+- claim provenance;
+- evidence links with relation: direct / indirect / context / contradictory;
 - paper-internal support strength;
-- why the evidence supports it;
+- support reason;
 - scope boundary;
 - unsupported stronger claim;
-- a **specific** action that would strengthen or stress-test it;
+- a concrete strengthening/stress-test plan;
 - external verification status.
 
-`what_would_strengthen_it` must never be a placeholder such as “当前材料未说明”. It is an analysis output.
+`what_would_strengthen_it` is an analysis output. In standard mode, it must never be a placeholder such as “当前材料未说明”.
 
-## Step 10 — Critical analysis
-Separate:
+## Step 11 — Critical analysis
+Keep three layers distinct.
 
 ### Author-acknowledged limitations / constraints
-Only explicit author statements, with evidence.
+Only what the authors explicitly state, with evidence.
 
-### PaperScope analysis-derived limitations
-Specific, falsifiable limitations or alternative explanations grounded in inspected material.
+### Analysis-derived limitations
+Specific concerns or alternative explanations inferred from inspected evidence.
 
-### PaperScope core weaknesses
-Select the 2–4 most consequential mechanism-level weaknesses. For each one, provide:
+### Core weaknesses
+Select only the 2–4 most consequential weaknesses. Each must include:
 
-- a short descriptive title;
 - what the weakness is;
 - why it matters;
-- the potential impact on claims, generalization, efficiency, or interpretation;
-- a concrete validation/stress test;
-- related claim IDs and assumption IDs when applicable;
+- potential impact on claims/generalization;
+- related claim/assumption IDs;
+- concrete validation or stress test;
 - evidence refs.
 
-Do not merely restate missing experiments as “core weaknesses” unless the missing experiment is essential to a central claim.
+Avoid generic criticism such as “more experiments are needed” unless you specify which experiment and what it would test.
 
-### Fragile assumptions
-Reference assumptions by `assumption_id` and explain failure modes and stress tests.
+## Step 12 — Open questions and bounded research directions
+Each open question must include:
 
-### Reviewer questions
-Prefer the top 3 high-value questions rather than a long generic list.
-
-### Applicability boundary
-State where the method/argument is supported and where generalization remains untested.
-
-## Step 11 — Open questions and bounded research directions
-Standard deep reading must produce grounded open questions when the paper supplies enough material.
-
-Each open question includes:
-
-- origin (`author_stated` or `analysis_derived`);
+- question;
+- origin (`author_stated` / `analysis_derived`);
 - why it matters;
-- a bounded validation/investigation plan;
-- evidence refs.
+- suggested validation;
+- evidence basis.
 
-Then derive a small set of `research_directions` from the strongest open questions and core weaknesses. Each direction must contain:
+Then derive a small number of research directions from the strongest weaknesses/open questions. Stop at target problem + rationale + validation focus. Do not invent a named model/network by default.
 
-- the target problem;
-- why it follows from the paper;
-- the validation focus;
-- related weakness IDs;
-- evidence refs;
-- a boundary note making clear this is PaperScope analysis unless the author explicitly proposed it.
-
-Stop at validation focus. Do not automatically invent a named new network, architecture, module stack, or full research proposal; that belongs to a separate innovation-generation workflow.
-
-## Step 12 — Guided return-to-source reading
-Read `references/guided-reading-rules.md`.
-
+## Step 13 — Guided return-to-source reading
 Produce:
 
 - must-read locations;
 - recommended locations;
 - skimmable locations;
-- a structured ~20-minute reading path.
+- a structured ~20-minute path.
 
-Every recommended location must answer **why the reader should look there** and what they should expect to learn.
+Each path step includes an approximate minute budget, why to read it, and the expected takeaway. Use only verified locators.
 
-Use only locators that exist in inspected materials. If the exact table/equation number is unavailable, recommend the relevant section generically rather than inventing a locator.
+Read `references/guided-reading-rules.md`.
 
-## Step 13 — Contradiction check
-If prose, tables, figures, supplements, or versions disagree:
+## Step 14 — Optional transferable-knowledge sidecar
+If useful, populate `knowledge_takeaways` with transferable concepts, methods, formulas, experimental designs, or evaluation practices. This is for future knowledge-base workflows and is **not** a seventh main report section by default.
 
-- preserve both observations;
-- attach both evidence refs;
-- mark the affected conclusion uncertain;
-- state what would resolve the discrepancy.
+## Step 15 — Contradiction check
+When paper prose, tables, figures, supplements, or versions disagree, preserve both observations, attach evidence, mark the conclusion uncertain, and state what would resolve the discrepancy.
 
-Never silently choose one value.
-
-## Step 14 — Final evidence audit and QA
-Before final output:
+## Step 16 — Final QA
+Before output, verify:
 
 - every `reported` statement has real evidence;
 - every evidence ID resolves;
-- every claim-linked evidence backlink is consistent;
-- structure-grounded evidence contains no PDF page numbers;
-- numeric claims are supported by linked evidence containing the relevant numbers or clearly marked as indirect;
-- paper-only analysis makes no field-level novelty claim;
-- high-risk assumptions have failure mode + stress test;
-- standard mode contains open questions and a reading guide;
-- no `what_would_strengthen_it` field is a placeholder;
-- author limitations and analysis limitations are not mixed;
-- standard mode contains at least one concrete core weakness when the paper has enough material for critique;
-- every core weakness has why-it-matters + potential impact + suggested validation;
-- every open question has why-it-matters + suggested validation;
-- research directions are bounded and do not silently become invention proposals;
-- experiment conclusions do not exceed tested conditions.
+- evidence backlinks to claims are coherent;
+- numeric claims are grounded in the linked evidence or explicitly marked indirect;
+- source-locator rules are respected;
+- paper-only analysis does not claim field novelty;
+- high-risk assumptions include failure mode + stress test;
+- core weaknesses are specific and testable;
+- standard mode contains substantive open questions and reading guidance;
+- no strengthening/why-it-matters field contains placeholders;
+- author limitations and analysis criticism are not mixed;
+- experiment conclusions do not exceed tested conditions;
+- the 20-minute path uses real locators and totals roughly 15–25 minutes.
 
-Run `scripts/validate_result.py` after generation whenever the environment permits.
+Run `scripts/validate_result.py` whenever the environment permits.
 
 ---
 
-## Output contract
+## User-facing output contract
 
-Return JSON conforming to `schemas/deep-reading-result.schema.json` v1.5.
+Return JSON conforming to `schemas/deep-reading-result.schema.json` v1.6.
 
-The renderer should expose a simple six-stage user report:
+The renderer should expose only six stable stages:
 
 1. 论文速览
 2. 研究问题与 Gap
@@ -340,21 +320,25 @@ The renderer should expose a simple six-stage user report:
 5. 批判性评价
 6. 开放问题与精读建议
 
-The backend schema may be richer than the visible UI.
+The backend may be much richer than the visible report. Do not add a seventh main section merely because an internal object exists.
 
-Read `references/rendering-guidance.md` for user-facing labels. Raw enums such as `reported`, `E2_BODY_TEXT`, `paper_only`, or `null` should normally not appear in a formal report.
+### Default presentation intent
+
+- first layer: 3-minute research judgment;
+- second layer: deep analysis;
+- third layer: evidence appendix / source verification.
+
+Read `references/rendering-guidance.md`.
 
 ---
 
 ## Hard boundaries
 
-- Do not fabricate source excerpts, locations, numbers, datasets, formulas, tables, figures, baselines, limitations, or citations.
+- Do not fabricate excerpts, locators, numbers, formulas, tables, figures, baselines, limitations, citations, or metadata.
 - Do not infer page numbers under `structure_grounded`.
-- Do not label a substantive, evidence-backed method statement `unknown`.
-- Do not downgrade strong paper-internal evidence solely because independent replication was not checked.
-- Do not claim universal superiority from a narrow benchmark.
-- Do not claim field novelty from the paper's own novelty language alone.
-- Do not duplicate author statements as PaperScope analysis without distinguishing provenance.
-- Do not allow a claim's numerical details to be “supported” by unrelated evidence.
-- Do not turn the report into a generic reviewer report unless `reviewer_mode` is requested.
-- Do not generate a new manuscript or innovation proposal unless separately requested.
+- Do not call paper-relative delta “field novelty” without external verification.
+- Do not downgrade paper-internal evidence solely because independent replication was not checked.
+- Do not force a fixed number of weaknesses or failure cases by inventing filler.
+- Do not output accept/reject decisions unless the user explicitly requests reviewer-mode judgment in a separate review workflow.
+- Do not turn bounded research directions into named architectures or full proposals unless the user asks for innovation generation.
+- Do not generate a longer report simply because more schema fields exist; analysis depth and presentation length are separate concerns.

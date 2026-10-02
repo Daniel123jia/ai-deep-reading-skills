@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:paperscope:schemas:deep-reading-result:1.5",
-  "title": "PaperScope AI Deep Reading Result v1.5",
-  "description": "Structured output contract for traceable, critical, and guided academic paper deep reading. v1.5 adds explicit core-weakness analysis, bounded research directions, descriptive claim titles, and stricter actionability requirements.",
+  "$id": "urn:paperscope:schemas:deep-reading-result:1.6",
+  "title": "PaperScope AI Deep Reading Result v1.6",
+  "description": "Structured output contract for Scholar AI / PaperScope Deep Reading v1.6: triage, reconstruct, verify, critique, transfer; evidence inventory; source-grounded research judgment; guided return-to-source reading.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "const": "1.5"
+      "const": "1.6"
     },
     "analysis_type": {
       "type": "string",
@@ -75,6 +75,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "user_research_context": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional user project/problem context. If supplied, use it to judge relevance and transfer value; never invent user context."
         }
       }
     },
@@ -101,9 +108,14 @@
         "empirical",
         "theory",
         "review",
+        "resource",
+        "discovery",
+        "clinical",
+        "materials",
         "general",
         "unknown"
-      ]
+      ],
+      "description": "Primary/secondary analytical lens. Classify by argument and evidence structure rather than discipline label."
     },
     "evidence_grade": {
       "type": "string",
@@ -1131,7 +1143,8 @@
             "pattern": "^ev-[0-9]{3,}$"
           }
         }
-      }
+      },
+      "description": "Actionable unresolved question: question + why it matters + a concrete validation path. Do not generate filler questions to reach a fixed count."
     },
     "reading_guide_item": {
       "type": "object",
@@ -1315,7 +1328,9 @@
         "strongest_evidence",
         "biggest_risk",
         "key_assumptions",
-        "most_important_open_question"
+        "most_important_open_question",
+        "why_read",
+        "next_research_direction"
       ],
       "properties": {
         "one_sentence_takeaway": {
@@ -1365,6 +1380,16 @@
         },
         "most_important_open_question": {
           "type": "string"
+        },
+        "why_read": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Why this paper is worth the reader’s time; state the specific intellectual or methodological value rather than a generic score."
+        },
+        "next_research_direction": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Most promising bounded follow-up direction, without inventing a named architecture."
         }
       }
     },
@@ -1375,6 +1400,8 @@
         "paper_id",
         "identity",
         "source_boundary",
+        "paper_lens",
+        "evidence_inventory",
         "evidence_refs",
         "paper_map",
         "research_question",
@@ -1492,6 +1519,19 @@
             "$ref": "#/$defs/research_direction_item"
           },
           "description": "Bounded follow-up directions derived from weaknesses/open questions. Do not generate named architectures or full proposals."
+        },
+        "paper_lens": {
+          "$ref": "#/$defs/paper_lens"
+        },
+        "evidence_inventory": {
+          "$ref": "#/$defs/evidence_inventory"
+        },
+        "knowledge_takeaways": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/knowledge_takeaway_item"
+          },
+          "description": "Optional sidecar for future knowledge-base workflows. Do not render as a seventh main report section by default."
         }
       }
     },
@@ -1682,7 +1722,8 @@
         "gap_assessment": {
           "$ref": "#/$defs/gap_assessment"
         }
-      }
+      },
+      "description": "Reconstruct the actual gap: author problem → author-claimed gap → analysis-derived bottleneck → bounded gap assessment."
     },
     "equation_explanation": {
       "type": "object",
@@ -1808,6 +1849,7 @@
       "required": [
         "order",
         "target_label",
+        "minutes",
         "why_read",
         "expected_takeaway",
         "evidence_refs"
@@ -1832,6 +1874,12 @@
             "type": "string",
             "pattern": "^ev-[0-9]{3,}$"
           }
+        },
+        "minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Approximate minutes for this stop. Standard path should total roughly 15–25 minutes."
         }
       }
     },
@@ -1898,7 +1946,8 @@
             "pattern": "^as-[0-9]{3,}$"
           }
         }
-      }
+      },
+      "description": "Top 2–4 consequential, falsifiable weaknesses. Prefer mechanism/assumption/evaluation weaknesses over generic complaints."
     },
     "research_direction_item": {
       "type": "object",
@@ -1955,6 +2004,139 @@
         "boundary_note": {
           "type": "string",
           "description": "Explicitly state that this is an analysis-derived direction, not an author-stated proposal, unless the paper says so."
+        }
+      },
+      "description": "Bounded transfer direction derived from evidence/weaknesses. Stop at target problem, rationale and validation focus; do not invent a named model."
+    },
+    "paper_lens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary",
+        "secondary",
+        "rationale"
+      ],
+      "properties": {
+        "primary": {
+          "$ref": "#/$defs/paper_type"
+        },
+        "secondary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/paper_type"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 8
+        }
+      },
+      "description": "One primary analytical lens and at most one secondary lens for genuinely hybrid papers."
+    },
+    "evidence_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "problem_framing_ids",
+        "method_ids",
+        "main_result_ids",
+        "ablation_ids",
+        "limitation_ids",
+        "critical_artifacts",
+        "missing_critical_evidence"
+      ],
+      "properties": {
+        "problem_framing_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "method_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "main_result_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "ablation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "limitation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
+        },
+        "critical_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Human-readable main tables/figures/equations/sections that carry the paper argument."
+        },
+        "missing_critical_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Critical evidence that could not be inspected or verified."
+        }
+      },
+      "description": "Compact pre-analysis inventory. Build this before interpretation so the report is claim-grounded rather than summary-first."
+    },
+    "knowledge_takeaway_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "takeaway_type",
+        "takeaway",
+        "why_transferable",
+        "evidence_refs"
+      ],
+      "properties": {
+        "takeaway_type": {
+          "type": "string",
+          "enum": [
+            "concept",
+            "method",
+            "formula",
+            "experimental_design",
+            "evaluation_practice",
+            "other"
+          ]
+        },
+        "takeaway": {
+          "type": "string",
+          "minLength": 8
+        },
+        "why_transferable": {
+          "type": "string",
+          "minLength": 8
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev-[0-9]{3,}$"
+          }
         }
       }
     }

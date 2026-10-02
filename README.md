@@ -1,27 +1,33 @@
-# PaperScope AI Deep Reading Skill v1.5
+# PaperScope / Scholar AI Deep Reading Skill v1.6
 
-Evidence-grounded academic paper deep reading for PaperScope / Scholar AI.
+This skill turns one academic paper into an evidence-grounded research judgment rather than a longer summary.
 
-v1.5 focuses on three goals:
+## What changed in v1.6
 
-- **More rigorous** — clearer source boundary, experiment protocol reasoning, assumption stress tests, and stronger status semantics.
-- **More traceable** — claim→evidence links, evidence→claim backlinks, numeric grounding checks, contradiction handling.
-- **More guided** — source-aware reading recommendations and a structured 20-minute return-to-paper path.
+The internal reading model is now:
 
-## Main files
+`Triage → Reconstruct → Verify → Critique → Transfer`
 
-- `SKILL.md` — workflow and hard boundaries.
-- `schemas/deep-reading-result.schema.json` — v1.5 output contract.
-- `references/evidence-rules.md` — evidence semantics.
-- `references/paper-type-lenses.md` — method / empirical / theory / review lenses.
-- `references/experiment-evidence-rules.md` — experiment interpretation protocol.
-- `references/guided-reading-rules.md` — return-to-source reading guidance.
-- `references/schema-invariants.md` — semantic invariants beyond JSON Schema.
-- `references/rendering-guidance.md` — user-facing report guidance.
-- `scripts/validate_result.py` — schema + semantic QA.
-- `examples/minimal-v1.5.json` — valid reference output.
+Key upgrades:
 
-## User-facing six-stage report
+- explicit pre-analysis Evidence Inventory;
+- primary + optional secondary paper lens;
+- expanded lenses for method, empirical, theory, review, resource, discovery, clinical, materials, and general papers;
+- stronger 3-minute research judgment card;
+- clearer Research Question vs Gap vs actual bottleneck;
+- assumption chain: Why Needed → Failure Mode → Stress Test;
+- experiment evidence chains instead of result-only summaries;
+- claim-level strengthening plans are mandatory analysis outputs;
+- 2–4 high-value core weaknesses instead of generic criticism;
+- Open Question → Why it matters → Suggested validation;
+- bounded research directions without auto-inventing named architectures;
+- source-grounded ~20-minute return-to-paper path with per-step time budgets;
+- optional transferable-knowledge sidecar for future knowledge-base workflows;
+- stricter semantic validator for evidence inventory, judgment quality, and reading-guide timing.
+
+## Stable user-facing report
+
+The visible report remains six stages:
 
 1. 论文速览
 2. 研究问题与 Gap
@@ -30,56 +36,24 @@ v1.5 focuses on three goals:
 5. 批判性评价
 6. 开放问题与精读建议
 
-The backend is richer than these six sections so the UI can stay simple.
+The backend is deliberately richer than the visible report.
 
-## What changed from v1.3
-
-### Traceability
-- Evidence refs now carry `evidence_role` and `supported_claim_ids` backlinks.
-- Claims use evidence links with `direct / indirect / context / contradictory` relations.
-- Validator checks missing backlinks and suspicious numeric claim/evidence mismatches.
-
-### Rigor
-- Added component-level material `coverage_matrix`.
-- Added structured `research_gap` rather than treating the research question as the Gap.
-- Added structured experiment-evidence chains.
-- Assumptions now include `why_needed`, `failure_mode`, and `stress_test`.
-- Method analysis can include verified key-equation explanations.
-
-### Guided reading
-- Reading guide now includes structured source targets and a structured ~20-minute path.
-- Judgment card adds core problem, core method, paper-relative innovation, strongest evidence, biggest risk, key assumptions, and the most important open question.
-
-## Validate an output
+## Validate a result
 
 ```bash
-python scripts/validate_result.py examples/minimal-v1.5.json
+python scripts/validate_result.py examples/minimal-v1.6.json --strict-warnings
 ```
 
-Expected:
+## Output contract
 
-```text
-OK: 0 errors, 0 warning(s)
-```
+Canonical schema:
 
-## Integration
+`schemas/deep-reading-result.schema.json`
 
-Recommended architecture:
+Default rendering target:
 
-```text
-Title / DOI / arXiv / PDF
-        ↓
-Retriever + Parser
-        ↓
-Structured source bundle
-        ↓
-PaperScope AI Deep Reading v1.5
-        ↓
-deep-reading-result.json
-        ↓
-Web renderer / Scholar-Format-Engine
-        ↓
-Web / DOCX / Markdown / PDF
-```
+- 3-minute judgment layer;
+- concise 4–6 page main report for a typical methods paper;
+- evidence appendix for detailed traceability.
 
-This skill does not format Word documents. Use Scholar-Format-Engine for final document delivery.
+Formatting is delegated to Scholar-Format-Engine.

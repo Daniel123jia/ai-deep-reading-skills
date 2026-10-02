@@ -1,33 +1,27 @@
-# Guided Return-to-Source Reading
+# Guided return-to-source reading
 
-The report should send the user back to the original paper intelligently.
+The reading guide exists to send the user back to the most valuable parts of the original paper.
 
-## Reading priorities
-- `must_read`: necessary to understand or judge the central claim.
-- `recommended`: materially improves interpretation or reveals a boundary.
-- `skim`: useful context but not essential to the main judgment.
+## Priority classes
+- `must_read`: needed to understand or judge the central claim.
+- `recommended`: clarifies mechanism, boundary, or important supporting evidence.
+- `skim`: useful context but not required for the central judgment.
 
-## Every recommendation must include
-- exact available target label;
+## Standard ~20-minute path
+Aim for 15–25 minutes total. Each step must include:
+
+- approximate minutes;
+- a real source target;
 - why to read it;
 - expected takeaway;
-- evidence refs when available.
+- evidence refs.
 
-## 20-minute path
-Design an ordered path that usually includes:
-1. problem framing / abstract;
-2. core method or theoretical construction;
-3. key equation/figure if essential;
-4. main result;
-5. decisive ablation/robustness test;
-6. discussion / limitation / failure mode.
+A typical method-paper route may look like:
 
-Do not invent Figure/Table/Equation identifiers. If only a section is known, recommend the section.
+1. Abstract / problem framing — 2–3 min.
+2. Core method section — 5–7 min.
+3. Essential formula or architecture figure — 2–4 min.
+4. Main ablation / claim-isolating table — 4–6 min.
+5. Discussion / limitations / sensitivity — 3–5 min.
 
-## Goal
-The path should help a researcher spend limited time on the highest-information parts of the paper, not merely mirror document order.
-
-
-## Tie reading guidance to critique
-
-At least one must-read item should, when possible, point the reader to the source location that is most diagnostic for the paper's biggest risk or strongest core weakness (for example, the decisive ablation, sensitivity table, limitation discussion, or key equation). The reading route should help the user verify both the paper's strongest claim and its most fragile point.
+Do not invent a table/equation number. If only the section is located reliably, recommend the section.

@@ -1,4 +1,4 @@
-# Schema Invariants — v1.5
+# Schema Invariants — v1.6
 
 These rules define semantic correctness beyond JSON Schema validation.
 
@@ -79,7 +79,7 @@ These rules define semantic correctness beyond JSON Schema validation.
 50. The affected conclusion is marked uncertain or bounded accordingly.
 
 
-## v1.5 invariants
+## v1.6 invariants
 
 1. Every claim has a non-empty, descriptive `claim_title`; renderers should prefer it to raw claim IDs.
 2. In standard/reviewer/followup modes, if the source boundary is at least E2 and critique is possible, `critical_review.core_weaknesses` should contain the highest-value weaknesses rather than a generic list of missing checks.
@@ -87,3 +87,13 @@ These rules define semantic correctness beyond JSON Schema validation.
 4. `why_it_matters`, `potential_impact`, and `suggested_validation` for core weaknesses may not use placeholders such as “当前材料未说明”.
 5. Every open question must contain substantive `why_it_matters` and `suggested_validation`.
 6. Research directions must be analysis-bounded and may not silently become named architecture proposals.
+
+## v1.6 invariants
+51. `paper_lens.primary` is required; `secondary` is optional and must not simply duplicate the primary lens.
+52. `evidence_inventory` is built before interpretation and all listed evidence IDs resolve.
+53. Standard E2/E3 reading should normally inventory distinct evidence for problem framing, method, and main results when those materials exist.
+54. `judgment_card.why_read` must state a specific intellectual/methodological reason rather than a generic value label.
+55. `judgment_card.next_research_direction` is bounded and does not silently become a named architecture proposal.
+56. The standard 20-minute path contains per-step minute budgets and should total roughly 15–25 minutes.
+57. Optional `knowledge_takeaways` remain a sidecar; renderers must not create a seventh main report section by default.
+58. Adding more schema fields does not justify a longer visible report; presentation depth is controlled downstream.
